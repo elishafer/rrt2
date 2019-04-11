@@ -11,7 +11,8 @@ import json
 
 show_animation = True
 
-class RRT():
+
+class Rrt:
 
     def __init__(self, start, goal, c_space_bounds, obstacle_list, max_iterations=500,
                  max_extend=2.0, goal_sample_rate=5):
@@ -125,24 +126,23 @@ class Node():
         self.parent = None
 
 
-def main(goal=[-6,35.0,math.pi/2]):
+def main(goal=[-6,35.0,math.pi/2], dimension='3d'):
     print("start " + __file__)
 
     # ====Search Path with RRT====
     with open('obstacle_list.json') as obstacle_file:
         obstacle_dict = json.load(obstacle_file)
-        obstacle_list = obstacle_dict['mlo']
+        obstacle_list = obstacle_dict['shipwreck']
     # [x,y,size]
     # Set Initial parameters
     c_space_bounds = [(-10, 10), (0, 40), (-math.pi, math.pi)]
     start = [0, 0, math.pi / 2]
-    dimension = '2d'
     if dimension == '2d':
         c_space_bounds = c_space_bounds[:2]
         start = start[:2]
         goal = goal[:2]
 
-    rrt = RRT(start=start, goal=goal,
+    rrt = Rrt(start=start, goal=goal,
               c_space_bounds=c_space_bounds,
               obstacle_list=obstacle_list)
     path = rrt.algo(animation=show_animation)
