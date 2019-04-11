@@ -3,17 +3,93 @@
 __author__ = "Elisei Shafer"
 
 import math
+import random
 from rrt import Rrt
-from rrt import Node
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.collections import PatchCollection
+import json
+
+show_animation = True
 
 
-class RrtStar(Rrt):
+class RrtStar:
 
     def __init__(self, start, goal, c_space_bounds, obstacle_list, max_iterations=500,
                  max_extend=2.0, goal_sample_rate=5):
-        super().__init__(start, goal, c_space_bounds, obstacle_list, max_iterations,
-                         max_extend, goal_sample_rate)
+        self.start = start
+        self.goal = goal
+        self.max_iterations = max_iterations
+        self.nodes = [Node(start)]
+        self.c_space_bounds = c_space_bounds
+        self.obstacle_list = obstacle_list
+        self.goal_sample_rate = goal_sample_rate
+        self.max_extend = max_extend
+
+    def sample_free(self, c_space_bounds):
+        if random.randint(0, 100) > self.goal_sample_rate:
+            x_rand = [random.uniform(x[0], x[1]) for x in c_space_bounds]
+        else:
+            x_rand = self.goal
+        x_rand = np.array(x_rand)
+        return x_rand
+
+    def find_nearest(self, x_rand, nodes):
+
+        dlist = [np.linalg.norm(x_rand - node.x) for node in nodes]
+        minind = dlist.index(min(dlist))
+        x_nearest = nodes[minind].x
+        return x_nearest, minind
+
+    def steer(self, x_nearest, x_rand, max_extend):
+        vector_rand_near = x_rand - x_nearest
+        extend_length = np.linalg.norm(vector_rand_near)
+        if extend_length > max_extend:
+            x_new = (vector_rand_near * max_extend) / extend_length + x_nearest
+        else:
+            x_new = x_rand
+
+        return x_new
+
+    def is_obstacle_free(self, x_nearest, x_new, obstacle_list):
+
+        for (ox, oy, size) in obstacle_list:
+            dx = ox - x_new[0]
+            dy = oy - x_new[1]
+            d = math.sqrt(dx * dx + dy * dy)
+            if d <= size:
+                return False  # collision
+
+        return True  # safe
+
+    def draw_graph(self, rnd=None):  # pragma: no cover
+        """
+        Draw Graph
+        """
+        plt.clf()
+        if rnd is not None:
+            plt.plot(rnd[0], rnd[1], "^k")
+        for node in self.nodes:
+            if node.parent is not None:
+                plt.plot([node.x[0], self.nodes[node.parent].x[0]], [
+                         node.x[1], self.nodes[node.parent].x[1]], "-g")
+
+        circles = []
+        fig = plt.gcf()
+        ax = fig.gca()
+        for (ox, oy, size) in self.obstacle_list:
+            # plt.plot(ox, oy, "ok", ms=30 * size)
+            circle = plt.Circle((ox, oy), size, fill=False)
+            circles.append(circle)
+        p = PatchCollection(circles)
+        ax.add_collection(p)
+
+        plt.plot(self.start[0], self.start[1], "xr")
+        plt.plot(self.goal[0], self.goal[1], "xr")
+        plt.axis([self.c_space_bounds[0][0], self.c_space_bounds[0][1],
+                  self.c_space_bounds[1][0], self.c_space_bounds[1][1]])
+        plt.grid(True)
+        plt.pause(0.01)
 
     def algo(self,animation=True):
 
@@ -26,8 +102,11 @@ class RrtStar(Rrt):
             x_new = self.steer(x_nearest, x_rand, self.max_extend)
 
             if self.is_obstacle_free(x_nearest,x_new, self.obstacle_list):
-                X_near = self.near_nodes(self.nodes,x_new, eta, gamma)
+                X_near, nearinds = self.near_nodes(self.nodes,x_new, eta, gamma)
                 x_min = x_nearest
+                c_min = x_nearest.cost + np.linalg.norm(x_new.x - x_nearest.x)
+
+                for x_near in X_near:
 
 
             if animation:
@@ -46,8 +125,15 @@ class RrtStar(Rrt):
         r = min([gamma * math.sqrt((math.log(nnode + 1) / (nnode + 1))), eta])
         dlist = [np.linalg.norm(x_new - node) for node in nodes]
         nearinds = [dlist.index(i) for i in dlist if i <= r]
-        return nearinds
+        X_near = [nodes[nearind].x for nearind in nearinds]
+        return X_near, nearinds
 
+class Node():
+
+    def __init__(self, x):
+        self.x = x
+        self.parent = None
+        self.cost = 0.0
 
 
 def main(goal=[-6,35.0,math.pi/2], dimension='3d'):
@@ -77,5 +163,6 @@ def main(goal=[-6,35.0,math.pi/2], dimension='3d'):
     plt.grid(True)
     plt.show()
 
-        if __name__ == '__main__':
-            main()
+
+if __name__ == '__main__':
+    main()
