@@ -8,14 +8,17 @@ import matplotlib.pylab as plt
 from matplotlib.collections import PatchCollection
 import math
 import json
+import copy
+import pickle
 
-show_animation = True
+show_animation = False
+DYNAMIC_STEERING = True
 
 
 class Rrt:
 
-    def __init__(self, start, goal, c_space_bounds, obstacle_list, max_iterations=500,
-                 max_extend=2.0, goal_sample_rate=5):
+    def __init__(self, start, goal, c_space_bounds, obstacle_list, max_iterations=4000,
+                 max_extend=1.0, goal_sample_rate=10):
         self.start = start
         self.goal = goal
         self.max_iterations = max_iterations
@@ -47,6 +50,17 @@ class Rrt:
             x_new = (vector_rand_near * max_extend) / extend_length + x_nearest
         else:
             x_new = x_rand
+
+        if DYNAMIC_STEERING:
+            u = 0.5
+            delta_t = 4
+            x_new = copy.deepcopy(x_nearest)
+            if len(x_new) == 3:
+                x_new[2] += random.uniform(-math.pi/6, math.pi/6)
+                x_new[2] %= 2*math.pi
+            x_new[0] += u * math.cos(x_nearest[2] + x_new[2] / 2) * delta_t
+            x_new[1] += u * math.sin(x_nearest[2] + x_new[2] / 2) * delta_t
+            x_new = np.array(x_new)
 
         return x_new
 
@@ -81,12 +95,15 @@ class Rrt:
                 self.draw_graph(x_rand)
 
         path = [[self.goal[0], self.goal[1]]]
+        debug_path = [[self.goal]]
         last_index = len(self.nodes) - 1
         while self.nodes[last_index].parent is not None:
             node = self.nodes[last_index]
             path.append([node.x[0], node.x[1]])
+            debug_path.append([node.x])
             last_index = node.parent
         path.append([self.start[0], self.start[1]])
+        save_path(path)
 
         return path
 
@@ -126,16 +143,21 @@ class Node():
         self.parent = None
 
 
-def main(goal=[-6,35.0,math.pi/2], dimension='3d'):
+def save_path(robot_path, dir_path="path.pkl"):
+    robot_path.reverse()
+    with open(dir_path, 'wb') as f:
+        pickle.dump(robot_path, f)
+
+def main(goal=[-10,80.0,math.pi/2], dimension='3d'):
     print("start " + __file__)
 
     # ====Search Path with RRT====
     with open('obstacle_list.json') as obstacle_file:
         obstacle_dict = json.load(obstacle_file)
-        obstacle_list = obstacle_dict['shipwreck']
+        obstacle_list = obstacle_dict['shipwreck_2']
     # [x,y,size]
     # Set Initial parameters
-    c_space_bounds = [(-10, 10), (0, 40), (-math.pi, math.pi)]
+    c_space_bounds = [(-40, 40), (0, 90), (-math.pi, math.pi)]
     start = [0, 0, math.pi / 2]
     if dimension == '2d':
         c_space_bounds = c_space_bounds[:2]

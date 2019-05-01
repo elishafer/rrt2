@@ -107,7 +107,12 @@ class RrtStar:
                 c_min = x_nearest.cost + np.linalg.norm(x_new.x - x_nearest.x)
 
                 for x_near in X_near:
-
+                    #TODO add collision check
+                    c_i = x_near.cost + np.linalg.norm(x_new.x-x_near.x)
+                    if c_i < c_min:
+                        x_min = x_near
+                        c_min = c_i
+                self.nodes
 
             if animation:
                 self.draw_graph(x_rand)
