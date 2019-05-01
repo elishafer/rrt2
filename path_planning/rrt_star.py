@@ -4,7 +4,6 @@ __author__ = "Elisei Shafer"
 
 import math
 import random
-from rrt import Rrt
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.collections import PatchCollection
@@ -38,8 +37,8 @@ class RrtStar:
 
         dlist = [np.linalg.norm(x_rand - node.x) for node in nodes]
         minind = dlist.index(min(dlist))
-        x_nearest = nodes[minind].x
-        return x_nearest, minind
+
+        return nodes[minind]
 
     def steer(self, x_nearest, x_rand, max_extend):
         vector_rand_near = x_rand - x_nearest
@@ -98,21 +97,32 @@ class RrtStar:
         gamma = 0.78 * np.prod(c_space_size)
         for i in range(self.max_iterations):
             x_rand = self.sample_free(self.c_space_bounds)
-            x_nearest, parent = self.find_nearest(x_rand, self.nodes)
-            x_new = self.steer(x_nearest, x_rand, self.max_extend)
+            x_nearest = self.find_nearest(x_rand, self.nodes)
+            x_new = self.steer(x_nearest.x, x_rand, self.max_extend)
 
-            if self.is_obstacle_free(x_nearest,x_new, self.obstacle_list):
+            if self.is_obstacle_free(x_nearest.x,x_new, self.obstacle_list):
                 X_near, nearinds = self.near_nodes(self.nodes,x_new, eta, gamma)
-                x_min = x_nearest
-                c_min = x_nearest.cost + np.linalg.norm(x_new.x - x_nearest.x)
+                x_min = x_nearest.x
+                c_min = x_nearest.cost + np.linalg.norm(x_new - x_nearest.x)
+                x_min_ind = len(self.nodes) - 1
 
-                for x_near in X_near:
+                for i, x_near in enumerate(X_near):
                     #TODO add collision check
-                    c_i = x_near.cost + np.linalg.norm(x_new.x-x_near.x)
+                    c_i = x_nearest.cost + np.linalg.norm(x_new-x_near.x)
+
                     if c_i < c_min:
-                        x_min = x_near
+                        # x_min = x_near.x
                         c_min = c_i
-                self.nodes
+                        nearinds[i-1]
+                new_node = Node(x_new)
+                new_node.parent = nearinds[x_min_ind]
+                new_node.cost = c_min
+                self.nodes.append(new_node)
+
+                for i, x_near in enumerate(X_near):
+                    c_i = new_node.cost + np.linalg.norm(x_new - x_near.x)
+                    if c_i < x_near.cost:
+                        self.nodes[nearinds[i]].parent = len(self.nodes)-1
 
             if animation:
                 self.draw_graph(x_rand)
@@ -128,10 +138,11 @@ class RrtStar:
     def near_nodes(self, nodes, x_new, eta, gamma):
         nnode = len(nodes)
         r = min([gamma * math.sqrt((math.log(nnode + 1) / (nnode + 1))), eta])
-        dlist = [np.linalg.norm(x_new - node) for node in nodes]
+        dlist = [np.linalg.norm(x_new - node.x) for node in nodes]
         nearinds = [dlist.index(i) for i in dlist if i <= r]
-        X_near = [nodes[nearind].x for nearind in nearinds]
+        X_near = [nodes[nearind] for nearind in nearinds]
         return X_near, nearinds
+
 
 class Node():
 
@@ -147,7 +158,7 @@ def main(goal=[-6,35.0,math.pi/2], dimension='3d'):
     # ====Search Path with RRT====
     with open('obstacle_list.json') as obstacle_file:
         obstacle_dict = json.load(obstacle_file)
-        obstacle_list = obstacle_dict['shipwreck']
+        obstacle_list = obstacle_dict['mlo']
     # [x,y,size]
     # Set Initial parameters
     c_space_bounds = [(-10, 10), (0, 40), (-math.pi, math.pi)]
@@ -157,7 +168,7 @@ def main(goal=[-6,35.0,math.pi/2], dimension='3d'):
         start = start[:2]
         goal = goal[:2]
 
-    rrt = Rrt(start=start, goal=goal,
+    rrt = RrtStar(start=start, goal=goal,
               c_space_bounds=c_space_bounds,
               obstacle_list=obstacle_list)
     path = rrt.algo(animation=show_animation)

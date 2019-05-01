@@ -17,8 +17,8 @@ DYNAMIC_STEERING = True
 
 class Rrt:
 
-    def __init__(self, start, goal, c_space_bounds, obstacle_list, max_iterations=4000,
-                 max_extend=1.0, goal_sample_rate=10):
+    def __init__(self, start, goal, c_space_bounds, obstacle_list, max_iterations=1000,
+                 max_extend=2.0, goal_sample_rate=10):
         self.start = start
         self.goal = goal
         self.max_iterations = max_iterations
@@ -37,8 +37,13 @@ class Rrt:
         return x_rand
 
     def find_nearest(self, x_rand, nodes):
-
-        dlist = [np.linalg.norm(x_rand-node.x) for node in nodes]
+        angle_weight = 10.0
+        dlist = []
+        for node in nodes:
+            weighted_vector = x_rand - node.x
+            weighted_vector[2]%=math.pi*2
+            weighted_vector[2] *= angle_weight
+            dlist.append(np.linalg.norm(weighted_vector))
         minind = dlist.index(min(dlist))
         x_nearest = nodes[minind].x
         return x_nearest, minind
@@ -91,7 +96,7 @@ class Rrt:
                 print('goal reached!')
                 break
 
-            if animation:
+            if animation and i%30:
                 self.draw_graph(x_rand)
 
         path = [[self.goal[0], self.goal[1]]]
@@ -148,7 +153,7 @@ def save_path(robot_path, dir_path="path.pkl"):
     with open(dir_path, 'wb') as f:
         pickle.dump(robot_path, f)
 
-def main(goal=[-10,80.0,math.pi/2], dimension='3d'):
+def main(goal=[-15,80.0,math.pi/2], dimension='3d'):
     print("start " + __file__)
 
     # ====Search Path with RRT====

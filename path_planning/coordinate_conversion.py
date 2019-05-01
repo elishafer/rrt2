@@ -119,4 +119,6 @@ def main(lat_0, lon_0, file_path):
 
 if __name__ == '__main__':
     path_file = 'path'
-    main(32.84097149, 34.973986,path_file)
+    distance_obstacle = 45
+    lat_0, lon_0, _ =pymap3d.ned2geodetic(-distance_obstacle, 0, 0, 32.841242, 34.973986, 0)
+    main(lat_0, lon_0,path_file)
