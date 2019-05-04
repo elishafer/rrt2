@@ -18,7 +18,7 @@ DYNAMIC_STEERING = True
 class Rrt:
 
     def __init__(self, start, goal, c_space_bounds, obstacle_list, max_iterations=1000,
-                 max_extend=2.0, goal_sample_rate=10):
+                 max_extend=4.0, goal_sample_rate=15):
         self.start = start
         self.goal = goal
         self.max_iterations = max_iterations
@@ -58,13 +58,14 @@ class Rrt:
 
         if DYNAMIC_STEERING:
             u = 0.5
-            delta_t = 4
+            delta_t = 8
             x_new = copy.deepcopy(x_nearest)
             if len(x_new) == 3:
-                x_new[2] += random.uniform(-math.pi/6, math.pi/6)
-                x_new[2] %= 2*math.pi
+                x_new[2] += random.uniform(-math.pi/5, math.pi/5)
+                # x_new[2] %= 2*math.pi
             x_new[0] += u * math.cos(x_nearest[2] + x_new[2] / 2) * delta_t
             x_new[1] += u * math.sin(x_nearest[2] + x_new[2] / 2) * delta_t
+            x_new[2] %= 2 * math.pi
             x_new = np.array(x_new)
 
         return x_new
