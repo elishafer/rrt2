@@ -56,7 +56,7 @@ class SparusXml:
                                       <position>
                                         <latitude>$lat</latitude>
                                         <longitude>$lon</longitude>
-                                        <z>2.0</z>
+                                        <z>4.0</z>
                                         <altitude_mode>False</altitude_mode>
                                       </position>
                                       <speed>0.5</speed>
@@ -73,7 +73,7 @@ class SparusXml:
                                       <initial_position>
                                         <latitude>$lat_0</latitude>
                                         <longitude>$lon_0</longitude>
-                                        <z>2.0</z>
+                                        <z>4.0</z>
                                         <altitude_mode>False</altitude_mode>
                                       </initial_position>
                                       <final_position>
@@ -105,6 +105,7 @@ class SparusXml:
             p_0 = p_1
         self.xml += self.waypoint_template.substitute(lat=robot_path[-1][0],
                                                       lon=robot_path[-1][1])
+        self.xml += '</mission>\n'
 
 
 def main(lat_0, lon_0, file_path):
