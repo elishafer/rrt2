@@ -51,9 +51,10 @@ class RrtStar:
 
         return x_new
 
-    def is_obstacle_free(self, x_nearest, x_new, obstacle_list):
+    def is_obstacle_free(self, x_new, obstacle_list):
 
         for (ox, oy, size) in obstacle_list:
+            # TODO use numpy library
             dx = ox - x_new[0]
             dy = oy - x_new[1]
             d = math.sqrt(dx * dx + dy * dy)
@@ -101,25 +102,33 @@ class RrtStar:
             x_nearest, x_min_ind = self.find_nearest(x_rand, self.nodes)
             x_new = self.steer(x_nearest.x, x_rand, self.max_extend)
 
-            if self.is_obstacle_free(x_nearest.x,x_new, self.obstacle_list):
+            if self.is_obstacle_free(x_new, self.obstacle_list):
                 X_near, nearinds = self.near_nodes(self.nodes,x_new, eta, gamma)
                 x_min = x_nearest.x
                 c_min = x_nearest.cost + np.linalg.norm(x_new - x_nearest.x)
 
                 for i, x_near in enumerate(X_near):
-                    #TODO add collision check
+                    # Check for lowest cost node to connect to.
+                    if not self.is_obstacle_free((x_new + x_near.x)/2, self.obstacle_list):
+                        #Collision check in middle between 2 nodes
+                        continue
                     c_i = x_near.cost + np.linalg.norm(x_new-x_near.x)
 
                     if c_i < c_min:
                         # x_min = x_near.x
                         c_min = c_i
                         x_min_ind = nearinds[i]
+
                 new_node = Node(x_new)
                 new_node.parent = x_min_ind
                 new_node.cost = c_min
                 self.nodes.append(new_node)
 
                 for i, x_near in enumerate(X_near):
+                    # Rewire adjacent nodes
+                    if not self.is_obstacle_free((x_new + x_near.x)/2, self.obstacle_list):
+                        #Collision check in middle between 2 nodes
+                        continue
                     c_i = new_node.cost + np.linalg.norm(x_new - x_near.x)
                     if c_i < x_near.cost:
                         self.nodes[nearinds[i]].parent = len(self.nodes)-1
@@ -184,7 +193,7 @@ def main(goal=[-15,80.0,math.pi/2], dimension='2d'):
     # ====Search Path with RRT====
     with open('obstacle_list.json') as obstacle_file:
         obstacle_dict = json.load(obstacle_file)
-        obstacle_list = obstacle_dict['shipwreck_2']
+        obstacle_list = obstacle_dict['mlo_3']
     # [x,y,size]
     # Set Initial parameters
     c_space_bounds = [(-40, 40), (0, 90), (-math.pi, math.pi)]
