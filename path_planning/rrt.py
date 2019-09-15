@@ -18,7 +18,7 @@ DYNAMIC_STEERING = True
 class Rrt:
 
     def __init__(self, start, goal, c_space_bounds, obstacle_list, max_iterations=1000,
-                 max_extend=4.0, goal_sample_rate=15):
+                 max_extend=2.0, goal_sample_rate=5):
         self.start = start
         self.goal = goal
         self.max_iterations = max_iterations
@@ -134,6 +134,7 @@ class Rrt:
             circles.append(circle)
         p = PatchCollection(circles)
         ax.add_collection(p)
+        ax.set_aspect('equal')
 
         plt.plot(self.start[0], self.start[1], "xr")
         plt.plot(self.goal[0], self.goal[1], "xr")
@@ -179,6 +180,10 @@ def main(goal=[-15,80.0,math.pi/2], dimension='3d'):
     rrt.draw_graph()
     plt.plot([x for (x, y) in path], [y for (x, y) in path], '-r')
     plt.grid(True)
+    # fig, ax = plt.subplots(1, 1)
+    # ax.plot([x for (x, y) in path], [y for (x, y) in path], '-r')
+    # ax.grid(True)
+    # ax.set_aspect('equal')
     plt.show()
 
 

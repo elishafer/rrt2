@@ -15,7 +15,7 @@ show_animation = False
 
 class RrtStar:
 
-    def __init__(self, start, goal, c_space_bounds, obstacle_list, max_iterations=500,
+    def __init__(self, start, goal, c_space_bounds, obstacle_list, max_iterations=2000,
                  max_extend=4.0, goal_sample_rate=5):
         self.start = start
         self.goal = goal
@@ -84,6 +84,7 @@ class RrtStar:
             circles.append(circle)
         p = PatchCollection(circles)
         ax.add_collection(p)
+        ax.set_aspect('equal')
 
         plt.plot(self.start[0], self.start[1], "xr")
         plt.plot(self.goal[0], self.goal[1], "xr")
