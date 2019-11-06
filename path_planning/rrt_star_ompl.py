@@ -10,12 +10,26 @@ from matplotlib.collections import PatchCollection
 import json
 import pickle
 
+try:
+    from ompl import base as ob
+    from ompl import geometric as og
+except ImportError:
+    # if the ompl module is not in the PYTHONPATH assume it is installed in a
+    # subdirectory of the parent directory called "py-bindings."
+    from os.path import abspath, dirname, join
+    import sys
+    sys.path.insert(0, join(dirname(dirname(abspath(__file__))), 'py-bindings'))
+    from ompl import base as ob
+    from ompl import geometric as og
+
+
 show_animation = False
+
 
 
 class RrtStar:
 
-    def __init__(self, start, goal, c_space_bounds, obstacle_list, max_iterations=500,
+    def __init__(self, start, goal, c_space_bounds, obstacle_list, max_iterations=2000,
                  max_extend=4.0, goal_sample_rate=5):
         self.start = start
         self.goal = goal
@@ -62,6 +76,15 @@ class RrtStar:
                 return False  # collision
 
         return True  # safe
+
+    def isStateValid(state):
+        x = state.getX()
+        y = state.getY()
+        for (ox, oy, size) in obstacle_list:
+            d = np.linalg.norm((ox - x, oy - y))
+            if d <= size:
+                return False
+        return True
 
     def draw_graph(self, rnd=None):  # pragma: no cover
         """

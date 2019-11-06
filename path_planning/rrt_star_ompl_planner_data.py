@@ -37,17 +37,6 @@
 # Author: Ryan Luna
 
 try:
-    # graph-tool and py-OMPL have some minor issues coexisting with each other.  Both modules
-    # define conversions to C++ STL containers (i.e. std::vector), and the module that is imported
-    # first will have its conversions used.  Order doesn't seem to matter on Linux,
-    # but on Apple, graph_tool will not be imported properly if OMPL comes first.
-    import graph_tool.all as gt
-    graphtool = True
-except ImportError:
-    print('Failed to import graph-tool.  PlannerData will not be analyzed or plotted')
-    graphtool = False
-
-try:
     from ompl import base as ob
     from ompl import geometric as og
 except ImportError:
@@ -60,8 +49,15 @@ except ImportError:
     from ompl import geometric as og
 
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.collections import PatchCollection
+import json
 
-obstacle_list = [[0,0,5]]
+with open('obstacle_list.json') as obstacle_file:
+    obstacle_dict = json.load(obstacle_file)
+    obstacle_list = obstacle_dict['mlo_3']
+
+# obstacle_list = [[0,0,5]]
 # Create a narrow passage between y=[-3,3].  Only a 6x6x6 cube will be valid, centered at origin
 def isStateValid(state):
     x = state.getX()
@@ -72,96 +68,16 @@ def isStateValid(state):
             return False
     return True
 
-def useGraphTool(pd):
-    # Extract the graphml representation of the planner data
-    graphml = pd.printGraphML()
-    f = open("graph.graphml", 'w')
-    f.write(graphml)
-    f.close()
-
-    # Load the graphml data using graph-tool
-    graph = gt.load_graph("graph.graphml", fmt="xml")
-    edgeweights = graph.edge_properties["weight"]
-
-    # Write some interesting statistics
-    avgdeg, stddevdeg = gt.vertex_average(graph, "total")
-    avgwt, stddevwt = gt.edge_average(graph, edgeweights)
-
-    print("---- PLANNER DATA STATISTICS ----")
-    print(str(graph.num_vertices()) + " vertices and " + str(graph.num_edges()) + " edges")
-    print("Average vertex degree (in+out) = " + str(avgdeg) + "  St. Dev = " + str(stddevdeg))
-    print("Average edge weight = " + str(avgwt)  + "  St. Dev = " + str(stddevwt))
-
-    _, hist = gt.label_components(graph)
-    print("Strongly connected components: " + str(len(hist)))
-
-    # Make the graph undirected (for weak components, and a simpler drawing)
-    graph.set_directed(False)
-    _, hist = gt.label_components(graph)
-    print("Weakly connected components: " + str(len(hist)))
-
-    # Plotting the graph
-    gt.remove_parallel_edges(graph) # Removing any superfluous edges
-
-    edgeweights = graph.edge_properties["weight"]
-    colorprops = graph.new_vertex_property("string")
-    vertexsize = graph.new_vertex_property("double")
-
-    start = -1
-    goal = -1
-
-    for v in range(graph.num_vertices()):
-
-        # Color and size vertices by type: start, goal, other
-        if pd.isStartVertex(v):
-            start = v
-            colorprops[graph.vertex(v)] = "cyan"
-            vertexsize[graph.vertex(v)] = 10
-        elif pd.isGoalVertex(v):
-            goal = v
-            colorprops[graph.vertex(v)] = "green"
-            vertexsize[graph.vertex(v)] = 10
-        else:
-            colorprops[graph.vertex(v)] = "yellow"
-            vertexsize[graph.vertex(v)] = 5
-
-    # default edge color is black with size 0.5:
-    edgecolor = graph.new_edge_property("string")
-    edgesize = graph.new_edge_property("double")
-    for e in graph.edges():
-        edgecolor[e] = "black"
-        edgesize[e] = 0.5
-
-    # using A* to find shortest path in planner data
-    if start != -1 and goal != -1:
-        _, pred = gt.astar_search(graph, graph.vertex(start), edgeweights)
-
-        # Color edges along shortest path red with size 3.0
-        v = graph.vertex(goal)
-        while v != graph.vertex(start):
-            p = graph.vertex(pred[v])
-            for e in p.out_edges():
-                if e.target() == v:
-                    edgecolor[e] = "red"
-                    edgesize[e] = 2.0
-            v = p
-
-    # Writing graph to file:
-    # pos indicates the desired vertex positions, and pin=True says that we
-    # really REALLY want the vertices at those positions
-    gt.graph_draw(graph, vertex_size=vertexsize, vertex_fill_color=colorprops,
-                  edge_pen_width=edgesize, edge_color=edgecolor,
-                  output="graph.png", pin=True)
-    print('\nGraph written to graph.png')
-
 def plan():
     # construct the state space we are planning in
     space = ob.SE2StateSpace()
 
     # set the bounds for R^3 portion of SE(3)
     bounds = ob.RealVectorBounds(2)
-    bounds.setLow(-80)
-    bounds.setHigh(80)
+    bounds.setLow(0,-40)
+    bounds.setHigh(0,40)
+    bounds.setLow(1,0)
+    bounds.setHigh(1,90)
     space.setBounds(bounds)
 
     # define a simple setup class
@@ -169,16 +85,16 @@ def plan():
 
     # create a start state
     start = ob.State(space)
-    start().setX(-9)
-    start().setY(-9)
+    start().setX(0)
+    start().setY(0)
     start().setYaw(0)
     # start().setZ(-9)
     # start().rotation().setIdentity()
 
     # create a goal state
     goal = ob.State(space)
-    goal().setX(9)
-    goal().setY(9)
+    goal().setX(-25)
+    goal().setY(60)
     goal().setYaw(0)
     # goal().setZ(-9)
     # goal().rotation().setIdentity()
@@ -194,7 +110,7 @@ def plan():
     ss.setup()
 
     # attempt to solve the problem
-    solved = ss.solve(1.0)
+    solved = ss.solve(2.0)
 
     if solved:
         # print the path to screen
@@ -207,8 +123,49 @@ def plan():
         # Computing weights of all edges based on state space distance
         pd.computeEdgeWeights()
 
-        if graphtool:
-            useGraphTool(pd)
+        path = get_path(ss)
+        draw_graph(path)
+        plt.show()
+
+def get_path(ss):
+    path_geometric = ss.getSolutionPath()
+    path_states = path_geometric.getStates()
+    i=0
+    out_path = []
+    while i<path_geometric.getStateCount():
+        out_path.append((path_states[i].getX(), path_states[i].getY()))
+        i += 1
+    return out_path
+
+
+def draw_graph(path):
+    plt.clf()
+
+    # for node in self.nodes:
+    #     if node.parent is not None:
+    #         plt.plot([node.x[0], self.nodes[node.parent].x[0]], [
+    #             node.x[1], self.nodes[node.parent].x[1]], "-g")
+
+    circles = []
+    fig = plt.gcf()
+    ax = fig.gca()
+    for (ox, oy, size) in obstacle_list:
+        # plt.plot(ox, oy, "ok", ms=30 * size)
+        circle = plt.Circle((ox, oy), size, fill=False)
+        circles.append(circle)
+    p = PatchCollection(circles)
+    ax.add_collection(p)
+    ax.set_aspect('equal')
+
+    plt.plot(path[0][0], path[0][1], "xr")
+    plt.plot(path[-1][0], path[-1][1], "xr")
+    plt.axis([-90, 90,
+              -90, 90])
+    plt.grid(True)
+    plt.plot([x for (x, y) in path], [y for (x, y) in path], '-r')
+
+
+
 
 if __name__ == "__main__":
     plan()
