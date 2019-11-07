@@ -64,7 +64,6 @@ class RrtStar:
     def is_obstacle_free(self, x_new, obstacle_list):
 
         for (ox, oy, size) in obstacle_list:
-            # TODO use numpy library
             dx = ox - x_new[0]
             dy = oy - x_new[1]
             d = sqrt(dx * dx + dy * dy)
@@ -72,6 +71,20 @@ class RrtStar:
                 return False  # collision
 
         return True  # safe
+
+    def is_path_collision_free(self, x_new, x_old, obstacle_list):
+        # circle and line intersection check
+        # https://stackoverflow.com/questions/1073336/circle-line-segment-collision-detection-algorithm
+        d = x_new - x_old
+        for (ox, oy, r) in obstacle_list:
+            f = x_old - np.array([ox,oy])
+            a = d.dot(d)
+            b = 2 * f.dot(d)
+            c = f.dot(f) - r * r
+            if b * b - 4 * a * c >= 0:
+                return False
+        return True
+
 
     def draw_graph(self, rnd=None):  # pragma: no cover
         """
@@ -114,13 +127,13 @@ class RrtStar:
             x_new = self.steer(x_nearest.x, x_rand, self.max_extend)
 
             if self.is_obstacle_free(x_new, self.obstacle_list):
-                X_near, nearinds = self.near_nodes(self.nodes,x_new, eta, gamma)
+                X_near, nearinds = self.near_nodes(self.nodes, x_new, eta, gamma)
                 x_min = x_nearest.x
                 c_min = x_nearest.cost + mynorm(x_new - x_nearest.x)
 
                 for i, x_near in enumerate(X_near):
                     # Check for lowest cost node to connect to.
-                    if not self.is_obstacle_free((x_new + x_near.x)/2, self.obstacle_list):
+                    if not self.is_path_collision_free(x_near.x, x_new, self.obstacle_list):
                         #Collision check in middle between 2 nodes
                         continue
                     c_i = x_near.cost + mynorm(x_new-x_near.x)
@@ -137,7 +150,7 @@ class RrtStar:
 
                 for i, x_near in enumerate(X_near):
                     # Rewire adjacent nodes
-                    if not self.is_obstacle_free((x_new + x_near.x)/2, self.obstacle_list):
+                    if not self.is_path_collision_free(x_near.x, x_new, self.obstacle_list):
                         #Collision check in middle between 2 nodes
                         continue
                     c_i = new_node.cost + mynorm(x_new - x_near.x)
