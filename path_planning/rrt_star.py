@@ -3,6 +3,7 @@
 __author__ = "Elisei Shafer"
 
 import math
+from math import sqrt
 import random
 import numpy as np
 import matplotlib.pyplot as plt
@@ -13,9 +14,18 @@ import pickle
 show_animation = False
 
 
+def distance(ox, oy, x, y):
+    return sqrt((ox - x) ** 2 + (oy - y) ** 2)
+
+
+def mynorm(a,b=None):
+    if b == None:
+        b = (0,0)
+    return distance(a[0],a[1],b[0],b[1])
+
 class RrtStar:
 
-    def __init__(self, start, goal, c_space_bounds, obstacle_list, max_iterations=500,
+    def __init__(self, start, goal, c_space_bounds, obstacle_list, max_iterations=1500,
                  max_extend=4.0, goal_sample_rate=5):
         self.start = start
         self.goal = goal
@@ -36,14 +46,14 @@ class RrtStar:
 
     def find_nearest(self, x_rand, nodes):
 
-        dlist = [np.linalg.norm(x_rand - node.x) for node in nodes]
+        dlist = [mynorm(x_rand - node.x) for node in nodes]
         minind = dlist.index(min(dlist))
 
         return nodes[minind], minind
 
     def steer(self, x_nearest, x_rand, max_extend):
         vector_rand_near = x_rand - x_nearest
-        extend_length = np.linalg.norm(vector_rand_near)
+        extend_length = mynorm(vector_rand_near)
         if extend_length > max_extend:
             x_new = (vector_rand_near * max_extend) / extend_length + x_nearest
         else:
@@ -57,7 +67,7 @@ class RrtStar:
             # TODO use numpy library
             dx = ox - x_new[0]
             dy = oy - x_new[1]
-            d = math.sqrt(dx * dx + dy * dy)
+            d = sqrt(dx * dx + dy * dy)
             if d <= size:
                 return False  # collision
 
@@ -106,14 +116,14 @@ class RrtStar:
             if self.is_obstacle_free(x_new, self.obstacle_list):
                 X_near, nearinds = self.near_nodes(self.nodes,x_new, eta, gamma)
                 x_min = x_nearest.x
-                c_min = x_nearest.cost + np.linalg.norm(x_new - x_nearest.x)
+                c_min = x_nearest.cost + mynorm(x_new - x_nearest.x)
 
                 for i, x_near in enumerate(X_near):
                     # Check for lowest cost node to connect to.
                     if not self.is_obstacle_free((x_new + x_near.x)/2, self.obstacle_list):
                         #Collision check in middle between 2 nodes
                         continue
-                    c_i = x_near.cost + np.linalg.norm(x_new-x_near.x)
+                    c_i = x_near.cost + mynorm(x_new-x_near.x)
 
                     if c_i < c_min:
                         # x_min = x_near.x
@@ -130,7 +140,7 @@ class RrtStar:
                     if not self.is_obstacle_free((x_new + x_near.x)/2, self.obstacle_list):
                         #Collision check in middle between 2 nodes
                         continue
-                    c_i = new_node.cost + np.linalg.norm(x_new - x_near.x)
+                    c_i = new_node.cost + mynorm(x_new - x_near.x)
                     if c_i < x_near.cost:
                         self.nodes[nearinds[i]].parent = len(self.nodes)-1
 
@@ -164,12 +174,12 @@ class RrtStar:
         return None
 
     def calc_dist_to_goal(self, x):
-        return np.linalg.norm(np.array(x) - np.array(self.goal))
+        return mynorm(np.array(x) - np.array(self.goal))
 
     def near_nodes(self, nodes, x_new, eta, gamma):
         nnode = len(nodes)
-        r = min([gamma * math.sqrt((math.log(nnode + 1) / (nnode + 1))), eta])
-        dlist = [np.linalg.norm(x_new - node.x) for node in nodes]
+        r = min([gamma * sqrt((math.log(nnode + 1) / (nnode + 1))), eta])
+        dlist = [mynorm(x_new - node.x) for node in nodes]
         nearinds = [dlist.index(distance) for distance in dlist if distance <= r]
         X_near = [nodes[nearind] for nearind in nearinds]
         return X_near, nearinds

@@ -51,22 +51,27 @@ except ImportError:
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.collections import PatchCollection
+from math import sqrt
 import json
 
 with open('obstacle_list.json') as obstacle_file:
     obstacle_dict = json.load(obstacle_file)
     obstacle_list = obstacle_dict['mlo_3']
 
-# obstacle_list = [[0,0,5]]
-# Create a narrow passage between y=[-3,3].  Only a 6x6x6 cube will be valid, centered at origin
+
 def isStateValid(state):
     x = state.getX()
     y = state.getY()
-    for (ox, oy, size) in obstacle_list:
-        d = np.linalg.norm((ox - x, oy - y))
-        if d <= size:
+    for (ox, oy, r) in obstacle_list:
+        c = clearance(ox, oy, x, y, r)
+        if c <= 0:
             return False
     return True
+
+
+def clearance(ox, oy, x, y, r):
+    return sqrt((ox - x)**2 + (oy - y)**2)-r
+
 
 def plan():
     # construct the state space we are planning in
@@ -110,7 +115,7 @@ def plan():
     ss.setup()
 
     # attempt to solve the problem
-    solved = ss.solve(2.0)
+    solved = ss.solve(1.0)
 
     if solved:
         # print the path to screen
