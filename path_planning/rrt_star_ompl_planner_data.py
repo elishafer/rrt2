@@ -115,6 +115,7 @@ def plan():
     ss.setup()
 
     # attempt to solve the problem
+    # To change time change value given to ss.solve
     solved = ss.solve(1.0)
 
     if solved:

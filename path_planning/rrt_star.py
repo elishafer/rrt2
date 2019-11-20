@@ -136,7 +136,8 @@ class RrtStar:
                     if not self.is_path_collision_free(x_near.x, x_new, self.obstacle_list):
                         #Collision check in middle between 2 nodes
                         continue
-                    c_i = x_near.cost + mynorm(x_new-x_near.x)
+                    # c_i = x_near.cost + mynorm(x_new-x_near.x)
+                    c_i = self.cost_func(x_near.cost, x_new, x_near.x)
 
                     if c_i < c_min:
                         # x_min = x_near.x
@@ -153,7 +154,8 @@ class RrtStar:
                     if not self.is_path_collision_free(x_near.x, x_new, self.obstacle_list):
                         #Collision check in middle between 2 nodes
                         continue
-                    c_i = new_node.cost + mynorm(x_new - x_near.x)
+                    # c_i = new_node.cost + mynorm(x_new - x_near.x)
+                    c_i = self.cost_func(new_node.cost, x_near.x, x_new)
                     if c_i < x_near.cost:
                         self.nodes[nearinds[i]].parent = len(self.nodes)-1
 
@@ -177,6 +179,7 @@ class RrtStar:
         goalinds = [disglist.index(i) for i in disglist if i <= self.max_extend]
 
         if not goalinds:
+            print('goal not reached')
             return None
 
         mincost = min([self.nodes[i].cost for i in goalinds])
@@ -196,6 +199,27 @@ class RrtStar:
         nearinds = [dlist.index(distance) for distance in dlist if distance <= r]
         X_near = [nodes[nearind] for nearind in nearinds]
         return X_near, nearinds
+
+    def cost_func(self, prev_cost, x_new, x_prev):
+
+        dist = mynorm(x_new - x_prev)
+        safety_cost = self.safety_cost_func(x_new[0], x_new[1])
+        # safety cost function currently deactivated: uncomment line below to activate
+        safety_cost = 0
+        # new_cost = prev_cost + dist + safety_cost
+        return new_cost
+
+
+    def safety_cost_func(self, x, y):
+
+        for (ox, oy, ro) in self.obstacle_list:
+            # TODO change 123 to variable
+            for r in [1, 2, 3]:
+                if (ox + x) ** 2 + (oy + y) ** 2 < ((ro + r) ** 2):
+                    return (4-r)
+        return 0
+
+# def circles_intersect()
 
 def save_path(robot_path, dir_path="path.pkl"):
     robot_path.reverse()
