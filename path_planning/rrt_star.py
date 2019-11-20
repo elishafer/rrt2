@@ -114,7 +114,6 @@ class RrtStar:
         plt.axis([self.c_space_bounds[0][0], self.c_space_bounds[0][1],
                   self.c_space_bounds[1][0], self.c_space_bounds[1][1]])
         plt.grid(True)
-        plt.pause(0.001)
 
     def algo(self,animation=True):
 
