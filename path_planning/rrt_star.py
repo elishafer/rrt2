@@ -95,8 +95,8 @@ class RrtStar:
             plt.plot(rnd[0], rnd[1], "^k")
         for node in self.nodes:
             if node.parent is not None:
-                plt.plot([node.x[0], self.nodes[node.parent].x[0]], [
-                         node.x[1], self.nodes[node.parent].x[1]], "-g")
+                plt.plot([node.x[1], self.nodes[node.parent].x[1]], [
+                         node.x[0], self.nodes[node.parent].x[0]], "-g")
 
         circles = []
         fig = plt.gcf()
@@ -111,15 +111,15 @@ class RrtStar:
 
         plt.plot(self.start[0], self.start[1], "xr")
         plt.plot(self.goal[0], self.goal[1], "xr")
-        plt.axis([self.c_space_bounds[0][0], self.c_space_bounds[0][1],
-                  self.c_space_bounds[1][0], self.c_space_bounds[1][1]])
+        plt.axis([self.c_space_bounds[1][0], self.c_space_bounds[1][1],
+                  self.c_space_bounds[0][0], self.c_space_bounds[0][1]])
         plt.grid(True)
 
-    def algo(self,animation=True):
+    def algo(self,animation=False):
 
-        eta = self.max_extend * 4.0
+        eta = self.max_extend * 8.0
         c_space_size = [x[1]-x[0] for x in self.c_space_bounds]
-        gamma = 0.78 * np.prod(c_space_size)
+        gamma = 1.382 * sqrt(np.prod(c_space_size))
         for i in range(self.max_iterations):
             x_rand = self.sample_free(self.c_space_bounds)
             x_nearest, x_min_ind = self.find_nearest(x_rand, self.nodes)
@@ -205,7 +205,7 @@ class RrtStar:
         safety_cost = self.safety_cost_func(x_new[0], x_new[1])
         # safety cost function currently deactivated: uncomment line below to activate
         safety_cost = 0
-        # new_cost = prev_cost + dist + safety_cost
+        new_cost = prev_cost + dist + safety_cost
         return new_cost
 
 
@@ -234,30 +234,44 @@ class Node():
         self.cost = 0.0
 
 
-def main(goal=[-15,80.0,math.pi/2], dimension='2d'):
+def  ros_path_planning_node(s, t, obstacle_list, step_size):
+
+    # Note here all coordinates are in ned
+    # We add padding of 10m around the start and target
+    # Maybe should change this to use library.
+    r_e = 6366707.0
+    pad = 57.3*10.0/r_e
+    step_size_rad = 57.3 * step_size/r_e
+    c_space_bounds = [(min(s[0], t[0]) - pad, max(s[0], t[0]) + pad),
+                      (min(s[1], t[1]) - pad, max(s[1], t[1]) + pad)]
+    rrt = RrtStar(start=s, goal=t,
+                  c_space_bounds=c_space_bounds,
+                  obstacle_list=obstacle_list,
+                  max_extend=step_size_rad
+                  )
+    path = rrt.algo(False)
+    return path, rrt
+
+
+def main(goal=[-15,80.0]):
     print("start " + __file__)
+    goal = [32.826240, 34.956214]
+    start = [32.827320, 34.954897]
+    # goal = [50, 50]
+    # start = [5, 5]
 
     # ====Search Path with RRT====
     with open('obstacle_list.json') as obstacle_file:
         obstacle_dict = json.load(obstacle_file)
-        obstacle_list = obstacle_dict['mlo_3']
+        # obstacle_list = obstacle_dict['mlo_3']
+        obstacle_list = [[0,0,0.001]]
     # [x,y,size]
     # Set Initial parameters
-    c_space_bounds = [(-40, 40), (0, 90), (-math.pi, math.pi)]
-    start = [0, 0, math.pi / 2]
-    if dimension == '2d':
-        c_space_bounds = c_space_bounds[:2]
-        start = start[:2]
-        goal = goal[:2]
-
-    rrt = RrtStar(start=start, goal=goal,
-              c_space_bounds=c_space_bounds,
-              obstacle_list=obstacle_list)
-    path = rrt.algo(animation=show_animation)
-
+    # TODO refactor to NED
+    path, rrt = ros_path_planning_node(start, goal, obstacle_list, 5.0)
     # Draw final path
     rrt.draw_graph()
-    plt.plot([x for (x, y) in path], [y for (x, y) in path], '-r')
+    plt.plot([e for (n, e) in path], [n for (n, e) in path], '-r')
     plt.grid(True)
     plt.show()
 
