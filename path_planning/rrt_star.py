@@ -118,8 +118,9 @@ class RrtStar:
     def algo(self, animation=False):
 
         eta = self.max_extend * 8.0
-        c_space_size = [x[1]-x[0] for x in self.c_space_bounds]
-        gamma = 1.382 * sqrt(np.prod(c_space_size))
+        c_space_size = [x[1] - x[0] for x in self.c_space_bounds]
+        # Checkout gamma in Karaman Frazzoli 2011. Also in documentation
+        gamma = 0.9972 * sqrt(np.prod(c_space_size))*1.2
         for i in range(self.max_iterations):
             x_rand = self.sample_free(self.c_space_bounds)
             x_nearest, x_min_ind = self.find_nearest(x_rand, self.nodes)
