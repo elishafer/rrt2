@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import PatchCollection
 import json
 import pickle
+import yaml
 
 show_animation = False
 
@@ -26,7 +27,7 @@ def mynorm(a, b=None):
 
 class RrtStar:
 
-    def __init__(self, start, goal, c_space_bounds, obstacle_list, max_iterations=1500,
+    def __init__(self, start, goal, c_space_bounds, obstacle_list, max_iterations=700,
                  max_extend=4.0, goal_sample_rate=1):
         self.start = start
         self.goal = goal
@@ -114,6 +115,7 @@ class RrtStar:
         plt.axis([self.c_space_bounds[1][0], self.c_space_bounds[1][1],
                   self.c_space_bounds[0][0], self.c_space_bounds[0][1]])
         plt.grid(True)
+        # plt.pause(0.001)
 
     def algo(self, animation=False):
 
@@ -205,7 +207,7 @@ class RrtStar:
         dist = mynorm(x_new - x_prev)
         safety_cost = self.safety_cost_func(x_new[0], x_new[1])
         # safety cost function currently deactivated: uncomment line below to activate
-        safety_cost = 0
+        # safety_cost = 0
         new_cost = prev_cost + dist + safety_cost
         return new_cost
 
@@ -234,11 +236,18 @@ class Node():
 
 
 def ros_path_planning_node(s, t, obstacle_list, step_size):
+    """
+    :param s:
+    :param t:
+    :param obstacle_list:
+    :param step_size:
+    :return:
+    """
     # Note here all coordinates are in ned
     # We add padding of 10m around the start and target
     # Maybe should change this to use library.
     r_e = 6366707.0
-    pad = 57.3 * 10.0 / r_e
+    pad = 57.3 * 20.0 / r_e
     step_size_rad = 57.3 * step_size / r_e
     c_space_bounds = [(min(s[0], t[0]) - pad, max(s[0], t[0]) + pad),
                       (min(s[1], t[1]) - pad, max(s[1], t[1]) + pad)]
@@ -250,6 +259,8 @@ def ros_path_planning_node(s, t, obstacle_list, step_size):
     path = rrt.algo(False)
     return path, rrt
 
+def convert_to_earth_rad(m):
+    return 57.3 * m / 6366707.0
 
 def main(goal=[-15, 80.0]):
     print("start " + __file__)
@@ -259,18 +270,24 @@ def main(goal=[-15, 80.0]):
     # start = [5, 5]
 
     # TODO refactor obstacle_list for lat lon.
-    # with open('obstacle_list.json') as obstacle_file:
-    #     obstacle_dict = json.load(obstacle_file)
-    #     obstacle_list = obstacle_dict['mlo_3']
-    obstacle_list = [[0, 0, 0.001]]
+    with open('obstacle_list.yaml') as obstacle_file:
+        scenario_name = 'mlo_3'
+        obstacle_dict = yaml.load(obstacle_file)
+        obstacle_list = 57.3 * np.array(obstacle_dict[scenario_name]['obstacles']) / 6366707.0
+        start = 57.3 * np.array(obstacle_dict[scenario_name]['start']) / 6366707.0 + start
+        goal = obstacle_dict[scenario_name]['goal']
+        goal = np.array([goal[1], goal[0]])
+        goal = 57.3 * goal  / 6366707.0 + start
+        obstacle_list = [[obstacle[1] + start[0], obstacle[0] + start[1], obstacle[2]] for obstacle in obstacle_list]
+    # obstacle_list = [[0, 0, 0.001]]
     # [x,y,size]
     # Set Initial parameters
     path, rrt = ros_path_planning_node(start, goal, obstacle_list, 5.0)
     # Draw final path
-    rrt.draw_graph()
-    plt.plot([e for (n, e) in path], [n for (n, e) in path], '-r')
-    plt.grid(True)
-    plt.show()
+    # rrt.draw_graph()
+    # plt.plot([e for (n, e) in path], [n for (n, e) in path], '-r')
+    # plt.grid(True)
+    # plt.show()
 
 
 if __name__ == '__main__':
