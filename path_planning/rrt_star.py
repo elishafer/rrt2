@@ -263,8 +263,13 @@ def ros_path_planning_node(s, t, obstacle_list, step_size, ecef=False):
     path = rrt.algo(False)
     return path, rrt
 
-def convert_to_earth_rad(m):
-    return 57.3 * m / 6366707.0
+
+def local_to_geo(local, geo_origin):
+    return 57.3 * (np.array(local)) / 6366707.0 + np.array(geo_origin)
+
+# TODO
+def geo_to_local(geo_origin, geo_point):
+    pass
 
 def main(goal=[-15, 80.0]):
     print("start " + __file__)
@@ -280,21 +285,27 @@ def main(goal=[-15, 80.0]):
         obstacle_list = obstacle_dict[scenario_name]['obstacles']
         # obstacle_list = 57.3 * np.array(obstacle_dict[scenario_name]['obstacles']) / 6366707.0
         # start = 57.3 * np.array(obstacle_dict[scenario_name]['start']) / 6366707.0 + start
-        goal = obstacle_dict[scenario_name]['goal']
-        start = [0,0]
+        local_goal = obstacle_dict[scenario_name]['goal']
+        local_start = [0,0]
         # goal = 57.3 * goal  / 6366707.0 + start
         # obstacle_list = [[obstacle[1] + start[0], obstacle[0] + start[1], obstacle[2]] for obstacle in obstacle_list]
     # obstacle_list = [[0, 0, 0.001]]
     # [x,y,size]
     # Set Initial parameters
-    path, rrt = ros_path_planning_node(start, goal, obstacle_list, 5.0)
-    # path = 57.3 * (np.array(path)) / 6366707.0 + np.array([32.827320, 34.954897])
+    path, rrt = ros_path_planning_node(local_start, local_goal, obstacle_list, 5.0)
     # Draw final path
     rrt.draw_graph()
     plt.plot([e for (n, e) in path], [n for (n, e) in path], '-r')
     plt.grid(True)
     plt.show()
 
+    plt.figure()
+    path = local_to_geo(path, start)
+    fig = plt.gcf()
+    ax = fig.gca()
+    ax.set_aspect('equal')
+    plt.plot([e for (n, e) in path], [n for (n, e) in path], '-r')
+    plt.show()
 
 if __name__ == '__main__':
     main()
