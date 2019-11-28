@@ -102,16 +102,16 @@ class RrtStar:
         circles = []
         fig = plt.gcf()
         ax = fig.gca()
-        for (ox, oy, size) in self.obstacle_list:
+        for (o_n, o_e, size) in self.obstacle_list:
             # plt.plot(ox, oy, "ok", ms=30 * size)
-            circle = plt.Circle((ox, oy), size, fill=False)
+            circle = plt.Circle((o_e, o_n), size, fill=False)
             circles.append(circle)
         p = PatchCollection(circles)
         ax.add_collection(p)
         ax.set_aspect('equal')
 
-        plt.plot(self.start[0], self.start[1], "xr")
-        plt.plot(self.goal[0], self.goal[1], "xr")
+        plt.plot(self.start[1], self.start[0], "xr")
+        plt.plot(self.goal[1], self.goal[0], "xr")
         plt.axis([self.c_space_bounds[1][0], self.c_space_bounds[1][1],
                   self.c_space_bounds[0][0], self.c_space_bounds[0][1]])
         plt.grid(True)
@@ -215,7 +215,8 @@ class RrtStar:
 
         for (ox, oy, ro) in self.obstacle_list:
             # TODO change 123 to variable
-            for r in [1, 2, 3]:
+            bounds = np.array([1, 2, 3])
+            for r in bounds:
                 if (ox + x) ** 2 + (oy + y) ** 2 < ((ro + r) ** 2):
                     return 4 - r
         return 0
@@ -235,7 +236,7 @@ class Node():
         self.cost = 0.0
 
 
-def ros_path_planning_node(s, t, obstacle_list, step_size):
+def ros_path_planning_node(s, t, obstacle_list, step_size, ecef=False):
     """
     :param s:
     :param t:
@@ -246,15 +247,18 @@ def ros_path_planning_node(s, t, obstacle_list, step_size):
     # Note here all coordinates are in ned
     # We add padding of 10m around the start and target
     # Maybe should change this to use library.
-    r_e = 6366707.0
-    pad = 57.3 * 20.0 / r_e
-    step_size_rad = 57.3 * step_size / r_e
-    c_space_bounds = [(min(s[0], t[0]) - pad, max(s[0], t[0]) + pad),
-                      (min(s[1], t[1]) - pad, max(s[1], t[1]) + pad)]
+    pad = 20.0
+    if ecef:
+        r_e = 6366707.0
+        pad = 57.3 * pad / r_e
+        step_size = 57.3 * step_size / r_e
+
+    c_space_bounds = [(min(s[0], t[0]) - pad/2, max(s[0], t[0]) + pad),
+                      (min(s[1], t[1]) - pad*2, max(s[1], t[1]) + pad*2)]
     rrt = RrtStar(start=s, goal=t,
                   c_space_bounds=c_space_bounds,
                   obstacle_list=obstacle_list,
-                  max_extend=step_size_rad
+                  max_extend=step_size
                   )
     path = rrt.algo(False)
     return path, rrt
@@ -264,7 +268,7 @@ def convert_to_earth_rad(m):
 
 def main(goal=[-15, 80.0]):
     print("start " + __file__)
-    goal = [32.826240, 34.956214]
+    # goal = [32.826240, 34.956214]
     start = [32.827320, 34.954897]
     # goal = [50, 50]
     # start = [5, 5]
@@ -273,21 +277,23 @@ def main(goal=[-15, 80.0]):
     with open('obstacle_list.yaml') as obstacle_file:
         scenario_name = 'mlo_3'
         obstacle_dict = yaml.load(obstacle_file)
-        obstacle_list = 57.3 * np.array(obstacle_dict[scenario_name]['obstacles']) / 6366707.0
-        start = 57.3 * np.array(obstacle_dict[scenario_name]['start']) / 6366707.0 + start
+        obstacle_list = obstacle_dict[scenario_name]['obstacles']
+        # obstacle_list = 57.3 * np.array(obstacle_dict[scenario_name]['obstacles']) / 6366707.0
+        # start = 57.3 * np.array(obstacle_dict[scenario_name]['start']) / 6366707.0 + start
         goal = obstacle_dict[scenario_name]['goal']
-        goal = np.array([goal[1], goal[0]])
-        goal = 57.3 * goal  / 6366707.0 + start
-        obstacle_list = [[obstacle[1] + start[0], obstacle[0] + start[1], obstacle[2]] for obstacle in obstacle_list]
+        start = [0,0]
+        # goal = 57.3 * goal  / 6366707.0 + start
+        # obstacle_list = [[obstacle[1] + start[0], obstacle[0] + start[1], obstacle[2]] for obstacle in obstacle_list]
     # obstacle_list = [[0, 0, 0.001]]
     # [x,y,size]
     # Set Initial parameters
     path, rrt = ros_path_planning_node(start, goal, obstacle_list, 5.0)
+    # path = 57.3 * (np.array(path)) / 6366707.0 + np.array([32.827320, 34.954897])
     # Draw final path
-    # rrt.draw_graph()
-    # plt.plot([e for (n, e) in path], [n for (n, e) in path], '-r')
-    # plt.grid(True)
-    # plt.show()
+    rrt.draw_graph()
+    plt.plot([e for (n, e) in path], [n for (n, e) in path], '-r')
+    plt.grid(True)
+    plt.show()
 
 
 if __name__ == '__main__':
