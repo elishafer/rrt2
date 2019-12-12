@@ -11,18 +11,9 @@ from matplotlib.collections import PatchCollection
 import json
 import pickle
 import yaml
+from path_planning.primatives import mynorm
 
 show_animation = False
-
-
-def distance(ox, oy, x, y):
-    return sqrt((ox - x) ** 2 + (oy - y) ** 2)
-
-
-def mynorm(a, b=None):
-    if b is None:
-        b = (0, 0)
-    return distance(a[0], a[1], b[0], b[1])
 
 
 class RrtStar:
