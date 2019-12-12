@@ -6,14 +6,16 @@ import math
 from math import sqrt
 import random
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.collections import PatchCollection
-import json
-import pickle
+# import pickle
 import yaml
-from path_planning.primatives import mynorm
+from primatives import mynorm, is_path_collision_free, safety_cost_func
 
 show_animation = False
+debug = False
+
+if debug == True:
+    import matplotlib.pyplot as plt
+    from matplotlib.collections import PatchCollection
 
 
 class RrtStar:
@@ -65,18 +67,18 @@ class RrtStar:
 
         return True  # safe
 
-    def is_path_collision_free(self, x_new, x_old, obstacle_list):
-        # circle and line intersection check
-        # https://stackoverflow.com/questions/1073336/circle-line-segment-collision-detection-algorithm
-        d = x_new - x_old
-        for (ox, oy, r) in obstacle_list:
-            f = x_old - np.array([ox, oy])
-            a = d.dot(d)
-            b = 2 * f.dot(d)
-            c = f.dot(f) - r * r
-            if b * b - 4 * a * c >= 0:
-                return False
-        return True
+    # def is_path_collision_free(self, x_new, x_old, obstacle_list):
+    #     # circle and line intersection check
+    #     # https://stackoverflow.com/questions/1073336/circle-line-segment-collision-detection-algorithm
+    #     d = x_new - x_old
+    #     for (ox, oy, r) in obstacle_list:
+    #         f = x_old - np.array([ox, oy])
+    #         a = d.dot(d)
+    #         b = 2 * f.dot(d)
+    #         c = f.dot(f) - r * r
+    #         if b * b - 4 * a * c >= 0:
+    #             return False
+    #     return True
 
     def draw_graph(self, rnd=None):  # pragma: no cover
         """
@@ -126,7 +128,7 @@ class RrtStar:
 
                 for i, x_near in enumerate(X_near):
                     # Check for lowest cost node to connect to.
-                    if not self.is_path_collision_free(x_near.x, x_new, self.obstacle_list):
+                    if not is_path_collision_free(x_near.x, x_new, self.obstacle_list):
                         # Collision check in middle between 2 nodes
                         continue
                     # c_i = x_near.cost + mynorm(x_new-x_near.x)
@@ -144,7 +146,7 @@ class RrtStar:
 
                 for i, x_near in enumerate(X_near):
                     # Rewire adjacent nodes
-                    if not self.is_path_collision_free(x_near.x, x_new, self.obstacle_list):
+                    if not is_path_collision_free(x_near.x, x_new, self.obstacle_list):
                         # Collision check in middle between 2 nodes
                         continue
                     # c_i = new_node.cost + mynorm(x_new - x_near.x)
@@ -162,7 +164,6 @@ class RrtStar:
             path.append([node.x[0], node.x[1]])
             last_index = node.parent
         path.append([self.start[0], self.start[1]])
-        save_path(path)
         return path
 
     def get_best_last_index(self):
@@ -196,21 +197,21 @@ class RrtStar:
     def cost_func(self, prev_cost, x_new, x_prev):
 
         dist = mynorm(x_new - x_prev)
-        safety_cost = self.safety_cost_func(x_new[0], x_new[1])
+        safety_cost = safety_cost_func(x_new[0], x_new[1], self.obstacle_list)
         # safety cost function currently deactivated: uncomment line below to activate
         # safety_cost = 0
         new_cost = prev_cost + dist + safety_cost
         return new_cost
 
-    def safety_cost_func(self, x, y):
-
-        for (ox, oy, ro) in self.obstacle_list:
-            # TODO change 123 to variable
-            bounds = np.array([1, 2, 3])
-            for r in bounds:
-                if (ox + x) ** 2 + (oy + y) ** 2 < ((ro + r) ** 2):
-                    return 4 - r
-        return 0
+    # def safety_cost_func(self, x, y):
+    #
+    #     for (ox, oy, ro) in self.obstacle_list:
+    #         # TODO change 123 to variable
+    #         bounds = np.array([1, 2, 3])
+    #         for r in bounds:
+    #             if (ox + x) ** 2 + (oy + y) ** 2 < ((ro + r) ** 2):
+    #                 return 4 - r
+    #     return 0
 
 
 def save_path(robot_path, dir_path="path.pkl"):
@@ -284,19 +285,21 @@ def main(goal=[-15, 80.0]):
     # [x,y,size]
     # Set Initial parameters
     path, rrt = ros_path_planning_node(local_start, local_goal, obstacle_list, 5.0)
-    # Draw final path
-    rrt.draw_graph()
-    plt.plot([e for (n, e) in path], [n for (n, e) in path], '-r')
-    plt.grid(True)
-    plt.show()
+    # save_path(path)
+    if debug == True:
+        # Draw final path
+        rrt.draw_graph()
+        plt.plot([e for (n, e) in path], [n for (n, e) in path], '-r')
+        plt.grid(True)
+        plt.show()
 
-    plt.figure()
-    path = local_to_geo(path, start)
-    fig = plt.gcf()
-    ax = fig.gca()
-    ax.set_aspect('equal')
-    plt.plot([e for (n, e) in path], [n for (n, e) in path], '-r')
-    plt.show()
+        plt.figure()
+        path = local_to_geo(path, start)
+        fig = plt.gcf()
+        ax = fig.gca()
+        ax.set_aspect('equal')
+        plt.plot([e for (n, e) in path], [n for (n, e) in path], '-r')
+        plt.show()
 
 if __name__ == '__main__':
     main()
