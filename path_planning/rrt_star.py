@@ -6,7 +6,6 @@ import math
 from math import sqrt
 import random
 import numpy as np
-# import pickle
 import yaml
 from primatives import mynorm, is_path_collision_free, safety_cost_func
 
@@ -66,19 +65,6 @@ class RrtStar:
                 return False  # collision
 
         return True  # safe
-
-    # def is_path_collision_free(self, x_new, x_old, obstacle_list):
-    #     # circle and line intersection check
-    #     # https://stackoverflow.com/questions/1073336/circle-line-segment-collision-detection-algorithm
-    #     d = x_new - x_old
-    #     for (ox, oy, r) in obstacle_list:
-    #         f = x_old - np.array([ox, oy])
-    #         a = d.dot(d)
-    #         b = 2 * f.dot(d)
-    #         c = f.dot(f) - r * r
-    #         if b * b - 4 * a * c >= 0:
-    #             return False
-    #     return True
 
     def draw_graph(self, rnd=None):  # pragma: no cover
         """
