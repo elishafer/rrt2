@@ -34,7 +34,7 @@ class RRTPlanner(object):
                     self.tree.AddVertex(v_new)
                     self.tree.AddEdge(v_nearest_id, v_new_id)
                     self.tree.SetCost(v_new_id,
-                                      self.tree.cost[v_nearest_id] + self.planning_env.compute_distance(v_nearest, v_new))
+                    self.tree.cost[v_nearest_id] + self.planning_env.compute_distance(v_nearest, v_new))
                 else:
                     continue
             else:
