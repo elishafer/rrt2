@@ -3,16 +3,16 @@ from math import sqrt
 from math import pi
 import random
 
-debug = True
-
-if debug:
-    import matplotlib.pyplot as plt
-    from matplotlib.collections import PatchCollection
+import matplotlib.pyplot as plt
+from matplotlib.collections import PatchCollection
 
 
 class ControlSpace(object):
 
-    def __init__(self, obstacle_list, start, goal, xlimit, ylimit, vlimit):
+    def __init__(self, obstacle_list, start, goal,
+                 xlimit, ylimit, vlimit,
+                 ulimit=(-0.5, 0.5), rlimit=(-0.1, 0.1),
+                 udotlimit=(-0.5, 0.5), rdotlimit=(-0.1, 0.1)):
 
         # Obtain the boundary limits.
         # Check if file exists.
@@ -23,18 +23,24 @@ class ControlSpace(object):
         self.ylimit = ylimit
         self.psilimit = (-pi, pi)
         self.vlimit = vlimit
+        self.ulimit = ulimit
+        self.rlimit = rlimit
         self.map_bounds = [self.xlimit, self.ylimit]
+        self.rdotlimit = rdotlimit
+        self.udotlimit = udotlimit
 
         # Check if start and goal are within limits and collision free
         if not self.state_validity_checker(start) or not self.state_validity_checker(goal):
-            raise ValueError('Start and Goal state must be within the map limits');
-            exit(0)
+            raise ValueError('Start and Goal state must be within the map limits')
 
-    def compute_distance(self, start_state, end_state):
+    def compute_distance(self, start_state, end_state, squared=False):
         sum = 0
         for i, start_var in enumerate(start_state):
             sum += (start_var - end_state[i]) ** 2
-        return sqrt(sum)
+        if squared:
+            return sum
+        else:
+            return sqrt(sum)
 
     def state_validity_checker(self, state):
 
@@ -75,14 +81,26 @@ class ControlSpace(object):
         return self.compute_distance(config, self.goal)
 
     def sample(self, goal_sample_rate):
-        # TODO
-        pass
+        """
+        Sample the control space.
+        In the case of the AUV for LARS we only care if the AUV reaches the goal region.
+        i.e. we don't care about the speed and orientation.
+        :param goal_sample_rate:
+        :return:
+        """
         if random.randint(0, 100) > goal_sample_rate:
             x_rand = [random.uniform(x[0], x[1]) for x in self.map_bounds]
         else:
-            x_rand = self.goal
+            x_rand = list(self.goal)
+        x_rand.append(random.uniform(*self.psilimit))
+        x_rand.append(random.uniform(*self.ulimit))
+        x_rand.append(random.uniform(*self.vlimit))
+        x_rand.append(random.uniform(*self.rlimit))
         x_rand = np.array(x_rand)
         return x_rand
+
+    def sample_control(self):
+        return [random.uniform(*self.udotlimit), random.uniform(*self.rdotlimit)]
 
     def visualize_plan(self, plan=None, visited=None, tree=None, title=None):
         '''

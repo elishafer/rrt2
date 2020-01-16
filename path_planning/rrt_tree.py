@@ -1,35 +1,41 @@
 import operator
-import numpy
+import numpy as np
+from math import sqrt
+
 
 class RRTTree(object):
-    
+
     def __init__(self, planning_env):
-        
+
         self.planning_env = planning_env
         self.vertices = []
         self.edges = dict()
         self.cost = dict()
 
-    def GetRootID(self):
+    def get_root_id(self):
         '''
         Returns the ID of the root in the tree.
         '''
         return 0
 
-    def GetNearestVertex(self, config):
+    def get_nearest_vertex(self, state, sample_cost):
         '''
         Returns the nearest state ID in the tree.
-        @param config Sampled configuration.
+        :param sample_cost:
+        :param state:
         '''
         dists = []
         for v in self.vertices:
-            dists.append(self.planning_env.compute_distance(config, v))
+            x_dist = self.planning_env.compute_distance(state, v, squared=True)
+            y_dist = (self.cost[v] - sample_cost) ** 2
+            # TODO insert weight for each component
+            dists.append(sqrt(x_dist + y_dist))
 
         vid, vdist = min(enumerate(dists), key=operator.itemgetter(1))
 
         return vid, self.vertices[vid]
-            
-    def GetKNN(self, config, k):
+
+    def get_knn(self, config, k):
         '''
         Return k-nearest neighbors
         @param config Sampled configuration.
@@ -39,14 +45,14 @@ class RRTTree(object):
         for v in self.vertices:
             dists.append(self.planning_env.compute_distance(config, v))
 
-        dists = numpy.array(dists)
+        dists = np.array(dists)
         k = min(k, len(dists) - 1)
-        knnIDs = numpy.argpartition(dists, k)
-        # knnDists = [dists[i] for i in knnIDs]
+        knn_ids = np.argpartition(dists, k)
+        # knnDists = [dists[i] for i in knn_ids]
 
-        return knnIDs[:k] #, [self.vertices[vid] for vid in knnIDs]
+        return knn_ids[:k]  # , [self.vertices[vid] for vid in knn_ids]
 
-    def AddVertex(self, config):
+    def add_vertex(self, config):
         '''
         Add a state to the tree.
         @param config Configuration to add to the tree.
@@ -55,7 +61,7 @@ class RRTTree(object):
         self.vertices.append(config)
         return vid
 
-    def AddEdge(self, sid, eid):
+    def add_edge(self, sid, eid):
         '''
         Adds an edge in the tree.
         @param sid start state ID
@@ -63,10 +69,10 @@ class RRTTree(object):
         '''
         self.edges[eid] = sid
 
-    def SetCost(self, vid, cost):
+    def set_cost(self, vid, cost):
         self.cost[vid] = cost
 
-    def ResetTree(self):
+    def reset_tree(self):
         self.vertices = []
         self.edges = dict()
         self.cost = dict()
