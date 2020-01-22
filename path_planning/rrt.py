@@ -11,7 +11,7 @@ import json
 import copy
 import pickle
 
-show_animation = False
+show_animation = True
 DYNAMIC_STEERING = True
 
 

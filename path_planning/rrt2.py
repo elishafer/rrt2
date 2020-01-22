@@ -5,11 +5,12 @@ from math import sin, cos, pi
 from copy import deepcopy
 from time import time
 from control_space_env import ControlSpace
+from matplotlib import pyplot as plt
 
 
 class RRTPlanner(object):
 
-    def __init__(self, planning_env, state_limits):
+    def __init__(self, planning_env, state_limits, goal_radius=5):
         self.planning_env = planning_env
         self.tree = RRTTree(self.planning_env)
         self.bounds = self.planning_env.map_bounds
@@ -20,8 +21,9 @@ class RRTPlanner(object):
         self.vlimit = state_limits[4]
         self.rlimit = state_limits[5]
         self.limits = state_limits
+        self.goal_radius = goal_radius
 
-    def plan(self, start_config, goal_config, goal_sample_rate=5, timeout=4.0):
+    def plan(self, start_config, goal_config, goal_sample_rate=5, timeout=float(5)):
         print(self.bounds)
         # Initialize an empty plan.
         plan = []
@@ -30,7 +32,7 @@ class RRTPlanner(object):
         self.tree.add_vertex(start_config)
         self.tree.set_cost(0, 0)
         cmin = 0
-        tmax = 4
+        tmax = 8
         v_min_id = None
         start_time = time()
         while True:
@@ -39,8 +41,8 @@ class RRTPlanner(object):
             x_rand = self.planning_env.sample(goal_sample_rate)
             c_rand = random.uniform(0, cmin)
             t_rand = random.uniform(0, tmax)
-            u_rand = self.planning_env.sample_control
-            v_nearest_id, _ = self.tree.get_nearest_vertex(x_rand, c_rand)
+            u_rand = self.planning_env.sample_control()
+            v_nearest_id, _ = self.tree.get_nearest_vertex(x_rand, c_rand, wy=0.5)
             v_nearest = self.tree.vertices[v_nearest_id]
             v_new = self.propagate(v_nearest, u_rand, t_rand)
             if self.planning_env.state_validity_checker(v_new):
@@ -49,17 +51,21 @@ class RRTPlanner(object):
                     self.tree.add_vertex(v_new)
                     self.tree.add_edge(v_nearest_id, v_new_id)
                     self.tree.set_cost(v_new_id,
-                                       self.tree.cost[v_nearest_id] + self.planning_env.compute_distance(v_nearest,
-                                                                                                         v_new))
+                                       self.tree.cost[v_nearest_id] +
+                                       self.planning_env.compute_distance(v_nearest, v_new,
+                                                                          w=(None, None, None, None, None, None)))
 
-                    if self.planning_env.compute_distance(goal_config, v_new) < 5 and \
+                    if self.planning_env.goal_radius_reached(v_new, r=self.goal_radius) and \
                             (v_min_id is None or self.tree.cost[v_new_id] < self.tree.cost[v_min_id]):
                         v_min_id = v_new_id
+                        cmin = self.tree.cost[v_new_id]
+
+            # self.planning_env.visualize_plan(tree=self.tree, rnd=x_rand[:2])
 
         best_vid = v_min_id
         if best_vid is None:
             print('goal not reached')
-            return None
+            return None, None, self.tree
         print('goal reached!')
         total_cost = self.tree.cost[best_vid]
         print('Total cost: ', total_cost)
@@ -69,6 +75,7 @@ class RRTPlanner(object):
             plan.append(self.tree.vertices[last_index])
             last_index = self.tree.edges[last_index]
         plan.append(start_config)
+
 
         return np.array(plan), total_cost, self.tree
 
@@ -97,13 +104,15 @@ class RRTPlanner(object):
         r = max(self.rlimit[0], min(u[1] * t + r_0, self.rlimit[1]))
         # Yaw
         psi = (u[1] * t * t + r_0) / 2 + psi_0
-        psi = (psi + pi) % 2 - pi
+        psi = (psi + pi) % (2 * pi) - pi
 
-        x = ((surge * cos(psi) - sway * sin(psi)) -
-             (surge_0 * cos(psi_0) - sway_0 * sin(psi))) / 2 * t
-        y = ((surge * sin(psi) - sway * cos(psi)) -
-             (surge_0 * sin(psi_0) - sway_0 * cos(psi))) / 2 * t
-        x_new = np.array([x, y, psi, surge, sway, r])
+        x_point = ((surge * cos(psi) - sway * sin(psi)) +
+                   (surge_0 * cos(psi_0) - sway_0 * sin(psi_0))) / 2 * t + \
+                  x_nearest[0]
+        y_point = ((surge * sin(psi) + sway * cos(psi)) +
+                   (surge_0 * sin(psi_0) + sway_0 * cos(psi_0))) / 2 * t + \
+                  x_nearest[1]
+        x_new = np.array([x_point, y_point, psi, surge, sway, r])
 
         return x_new
 
@@ -120,12 +129,16 @@ if __name__ == '__main__':
         local_goal = obstacle_dict[scenario_name]['goal']
         local_start = [0, 0]
     start = (0, 0, 0, 0, 0, 0)
-    goal = (80, -15, 0, 0, 0)
+    goal = (80, -15, None, None, None, None)
     xlimit = (0, 100)
-    ylimit = (-100, 100)
+    ylimit = (-50, 50)
     vlimit = (-0.25, 0.5)
     state_limits = [xlimit, ylimit, (-pi, pi), (-0.25, 0.5), (-1.0, 1.0), (-0.1, 0.1)]
     planning_env = ControlSpace(obstacle_list, start, goal,
                                 xlimit, ylimit, vlimit)
     planner = RRTPlanner(planning_env, state_limits)
-    planner.plan(start, goal)
+    plan, total_cost, tree = planner.plan(start, goal)
+
+    # planning_env.visualize_plan(plan, tree=tree)
+    # planning_env.visualize_plan(plan)
+    # plt.show()

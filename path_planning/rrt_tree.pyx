@@ -18,18 +18,20 @@ class RRTTree(object):
         '''
         return 0
 
-    def get_nearest_vertex(self, state, sample_cost):
+    def get_nearest_vertex(self, state, sample_cost, wx=(None, None, None, None, None, None), wy=1):
         '''
         Returns the nearest state ID in the tree.
         :param sample_cost:
         :param state:
         '''
         dists = []
-        for v in self.vertices:
-            x_dist = self.planning_env.compute_distance(state, v, squared=True)
-            y_dist = (self.cost[v] - sample_cost) ** 2
-            # TODO insert weight for each component
-            dists.append(sqrt(x_dist + y_dist))
+        for vid, v in enumerate(self.vertices):
+            x_dist = self.planning_env.compute_distance(state, v, squared=True, w=wx)
+            if sample_cost != 0:
+                y_dist = (self.cost[vid] - sample_cost) ** 2
+                dists.append(sqrt(x_dist + y_dist * wy))
+            else:
+                dists.append(sqrt(x_dist))
 
         vid, vdist = min(enumerate(dists), key=operator.itemgetter(1))
 

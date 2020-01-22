@@ -26,8 +26,10 @@ def is_path_collision_free(x_new, x_old, list obstacle_list):
             c += f[i] * f[i]
         b *= 2
         c -= r * r
-        if b * b - 4 * a * c >= 0:
-            return False
+        discriminant = b * b - 4 * a * c
+        if discriminant >= 0 and a > 0:
+            if 0 < (-b - sqrt(discriminant)) / (2 * a) <= 1:
+                return False
     return True
 
 
