@@ -10,3 +10,6 @@ setup(
 setup(
     ext_modules=cythonize("path_planning/primatives.pyx"),
 )
+setup(
+    ext_modules=cythonize("path_planning/rrt2.pyx"),
+)

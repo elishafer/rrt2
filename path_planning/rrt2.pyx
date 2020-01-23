@@ -5,7 +5,6 @@ from math import sin, cos, pi
 from copy import deepcopy
 from time import time
 from control_space_env import ControlSpace
-from matplotlib import pyplot as plt
 
 
 class RRTPlanner(object):
@@ -86,7 +85,23 @@ class RRTPlanner(object):
         :param u:
         :param t:
         :return:
+
+        Xu|u| = -23.6
+        Yvv   = -183.42
+        Nrr   = -26.4
+        m = 63.2
+        I = 12.1
+        Added mass:
+        Nr = -11.75
+        Xu = -56.48 or -29 (adj)
+        Yv = -60.817 or -20
+
+        Forces:
+        N = 60 or 20
+        Y = 35 max, 24 preffered
+        X = 100 ( estimate, need to ask YG)
         """
+
         x_new = deepcopy(x_nearest)
         # TODO create better integrator
         # Integration over time
