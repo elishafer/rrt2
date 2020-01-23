@@ -12,8 +12,8 @@ class ControlSpace(object):
 
     def __init__(self, obstacle_list, start, goal,
                  xlimit, ylimit, vlimit,
-                 ulimit=(0.0, 0.5), rlimit=(-0.01, 0.01),
-                 udotlimit=(0, 0.5), rdotlimit=(-0.03, 0.03)):
+                 ulimit, rlimit,
+                 input_limits):
 
         # Obtain the boundary limits.
         # Check if file exists.
@@ -27,9 +27,7 @@ class ControlSpace(object):
         self.ulimit = ulimit
         self.rlimit = rlimit
         self.map_bounds = [self.xlimit, self.ylimit]
-        self.rdotlimit = rdotlimit
-        self.udotlimit = udotlimit
-
+        self.input_limits = input_limits
         # Check if start and goal are within limits and collision free
         if not self.state_validity_checker(start) or not self.state_validity_checker(goal):
             raise ValueError('Start and Goal state must be within the map limits')
@@ -84,12 +82,9 @@ class ControlSpace(object):
             c -= r * r
             discriminant = b * b - 4 * a * c
             if discriminant >= 0:
-                if 0 < (b - sqrt(discriminant)) / (2 * a) <= 1:
+                if 0 < (-b - sqrt(discriminant)) / (2 * a) <= 1:
                     return False
         return True
-
-    def compute_heuristic(self, config):
-        return self.compute_distance(config, self.goal)
 
     def sample(self, goal_sample_rate):
         """
@@ -119,7 +114,7 @@ class ControlSpace(object):
         return x_rand
 
     def sample_control(self):
-        return [random.uniform(*self.udotlimit), random.uniform(*self.rdotlimit)]
+        return [random.uniform(*limit) for limit in self.input_limits]
 
     def goal_radius_reached(self, state, r=5):
         goal_p = deepcopy(self.goal)

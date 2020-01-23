@@ -1,5 +1,4 @@
 import operator
-import numpy as np
 from math import sqrt
 
 
@@ -36,23 +35,6 @@ class RRTTree(object):
         vid, vdist = min(enumerate(dists), key=operator.itemgetter(1))
 
         return vid, self.vertices[vid]
-
-    def get_knn(self, config, k):
-        '''
-        Return k-nearest neighbors
-        @param config Sampled configuration.
-        @param k Number of nearest neighbors to retrieve.
-        '''
-        dists = []
-        for v in self.vertices:
-            dists.append(self.planning_env.compute_distance(config, v))
-
-        dists = np.array(dists)
-        k = min(k, len(dists) - 1)
-        knn_ids = np.argpartition(dists, k)
-        # knnDists = [dists[i] for i in knn_ids]
-
-        return knn_ids[:k]  # , [self.vertices[vid] for vid in knn_ids]
 
     def add_vertex(self, config):
         '''

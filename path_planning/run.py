@@ -13,7 +13,7 @@ def main(planning_env, planner, start, goal):
     print('Starting plan')
 
     # Plan.
-    plan, total_cost, tree = planner.plan(start, goal, timeout=5)
+    plan, total_cost, tree = planner.plan(start, goal, timeout=10, tmax=10)
 
     # Visualize the final path.
     planning_env.visualize_plan(plan, tree=tree)
@@ -43,16 +43,18 @@ if __name__ == "__main__":
     goal = (80, -15, None, None, None, None)
     xlimit = (0, 100)
     ylimit = (-50, 50)
-    vlimit = (-0.25, 0.5)
-    udotlimit = (-0.1, 0.1)
-    rdotlimit = (-0.03, 0.03)
+    ulimit = (-0.5, 1.2)
+    vlimit = (-0.5, 0.5)
+    rlimit = (-0.3, 0.3)
+    # input_limits = [(-154, 154), (-50, 50), (-15, 15)]
+    input_limits = [(-50, 154), (-50, 50), (-15, 15)]
     state_limits = [xlimit, ylimit, (-pi, pi), (-0.25, 0.5), (-1.0, 1.0), (-0.1, 0.1)]
-
     # setup the environment
     planning_env = ControlSpace(obstacle_list, start, goal,
                                 xlimit, ylimit, vlimit,
-                                udotlimit, rdotlimit)
-    planner = RRTPlanner(planning_env, state_limits)
+                                ulimit, rlimit,
+                                input_limits)
+    planner = RRTPlanner(planning_env, state_limits, control_type='force')
 
     # # Next setup the planner
     # if args.planner == 'rrt2':

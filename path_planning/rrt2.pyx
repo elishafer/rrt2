@@ -9,7 +9,7 @@ from control_space_env import ControlSpace
 
 class RRTPlanner(object):
 
-    def __init__(self, planning_env, state_limits, goal_radius=5):
+    def __init__(self, planning_env, state_limits, goal_radius=5, control_type='force'):
         self.planning_env = planning_env
         self.tree = RRTTree(self.planning_env)
         self.bounds = self.planning_env.map_bounds
@@ -21,8 +21,9 @@ class RRTPlanner(object):
         self.rlimit = state_limits[5]
         self.limits = state_limits
         self.goal_radius = goal_radius
+        self.control_type = control_type
 
-    def plan(self, start_config, goal_config, goal_sample_rate=5, timeout=float(5)):
+    def plan(self, start_config, goal_config, goal_sample_rate=5, timeout=float(5), tmax=8):
         print(self.bounds)
         # Initialize an empty plan.
         plan = []
@@ -31,7 +32,6 @@ class RRTPlanner(object):
         self.tree.add_vertex(start_config)
         self.tree.set_cost(0, 0)
         cmin = 0
-        tmax = 8
         v_min_id = None
         start_time = time()
         while True:
@@ -43,7 +43,7 @@ class RRTPlanner(object):
             u_rand = self.planning_env.sample_control()
             v_nearest_id, _ = self.tree.get_nearest_vertex(x_rand, c_rand, wy=0.5)
             v_nearest = self.tree.vertices[v_nearest_id]
-            v_new = self.propagate(v_nearest, u_rand, t_rand)
+            v_new = self.propagate(v_nearest, u_rand, t_rand, control_type=self.control_type)
             if self.planning_env.state_validity_checker(v_new):
                 if self.planning_env.edge_validity_checker(v_nearest, v_new):
                     v_new_id = len(self.tree.vertices)
@@ -52,7 +52,9 @@ class RRTPlanner(object):
                     self.tree.set_cost(v_new_id,
                                        self.tree.cost[v_nearest_id] +
                                        self.planning_env.compute_distance(v_nearest, v_new,
-                                                                          w=(None, None, None, None, None, None)))
+                                                                          w=(None, None, None, None, None, None)) +
+                                       100 * t_rand * abs(v_new[4]) + 100 * t_rand * abs(v_new[5]) +
+                                       t_rand * 10)
 
                     if self.planning_env.goal_radius_reached(v_new, r=self.goal_radius) and \
                             (v_min_id is None or self.tree.cost[v_new_id] < self.tree.cost[v_min_id]):
@@ -78,15 +80,16 @@ class RRTPlanner(object):
 
         return np.array(plan), total_cost, self.tree
 
-    def propagate(self, x_nearest, u, t):
+    def propagate(self, x_nearest, u, t, control_type):
         """
 
+        :param control_type:
         :param x_nearest: [x, y, psi, u, v, r]
-        :param u:
+        :param u: [X, Y, N] or [udot, vdot, rdot]
         :param t:
         :return:
 
-        Xu|u| = -23.6
+        Xuu = -23.6
         Yvv   = -183.42
         Nrr   = -26.4
         m = 63.2
@@ -97,9 +100,13 @@ class RRTPlanner(object):
         Yv = -60.817 or -20
 
         Forces:
-        N = 60 or 20
-        Y = 35 max, 24 preffered
-        X = 100 ( estimate, need to ask YG)
+        N = 15 (or maybe 150?)
+        Y = 100
+        X = 154
+
+        umax  = 1.8; cruise = 0.5 ~ 0.7
+        vmax = 0.5
+        rmax = 0.3
         """
 
         x_new = deepcopy(x_nearest)
@@ -110,15 +117,38 @@ class RRTPlanner(object):
         sway_0 = x_nearest[4]
         r_0 = x_nearest[5]
 
+        # Set
+        Xuu = -23.6
+        Yvv = -183.42
+        Nrr = -26.4
+        m = 63.2
+        I = 12.1
+        Nr = -11.75
+        Xu = -29
+        Yv = -20
+
+        if control_type == 'force':
+            # Calculate accelerations:
+            # TODO: Is it accurate to assume constant velocity?
+            udot = (u[0] + Xuu * surge_0 * abs(surge_0)) / (m + Xu)
+            vdot = (u[1] + Yvv * sway_0 * abs(sway_0)) / (m + Yv)
+            rdot = (u[2] + Nrr * r_0 * abs(r_0)) / (I + Nr)
+        elif control_type == 'acceleration':
+            udot = u[0]
+            vdot = u[1]
+            rdot = u[3]
+        else:
+            raise Exception(
+                'control type should be force or acceleration. Value of control_type was: {}'.format(control_type))
         # surge
-        surge = max(self.ulimit[0], min(u[0] * t + surge_0, self.ulimit[1]))
+        surge = max(self.ulimit[0], min(udot * t + surge_0, self.ulimit[1]))
         # sway
         # TODO introduce sway
         sway = 0
         # Yaw speed
-        r = max(self.rlimit[0], min(u[1] * t + r_0, self.rlimit[1]))
+        r = max(self.rlimit[0], min(vdot * t + r_0, self.rlimit[1]))
         # Yaw
-        psi = (u[1] * t * t + r_0) / 2 + psi_0
+        psi = (rdot * t * t + r_0) / 2 + psi_0
         psi = (psi + pi) % (2 * pi) - pi
 
         x_point = ((surge * cos(psi) - sway * sin(psi)) +
