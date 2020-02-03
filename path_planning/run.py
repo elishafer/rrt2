@@ -2,6 +2,7 @@
 import yaml
 from math import pi
 from matplotlib import pyplot as plt
+import numpy as np
 
 from rrt2 import RRTPlanner
 from control_space_env import ControlSpace
@@ -13,10 +14,18 @@ def main(planning_env, planner, start, goal):
     print('Starting plan')
 
     # Plan.
-    plan, total_cost, tree = planner.plan(start, goal, timeout=10, tmax=10)
+    plan, total_cost, tree = planner.plan(start, goal, timeout=120, tmax=8, velocity_current=(0, 0.0), cmin=140.0)
+
+    print(plan)
 
     # Visualize the final path.
     planning_env.visualize_plan(plan, tree=tree)
+    plan[0, 2] = 0
+    plan = plan.astype(float)
+    u_e = np.cos(plan[:, 2]) * plan[:, 3] - np.sin(plan[:, 2]) * plan[:, 4]
+    v_e = np.sin(plan[:, 2]) * plan[:, 3] + np.cos(plan[:, 2]) * plan[:, 4]
+    plt.quiver(plan[1:, 1], plan[1:, 0], v_e[1:], u_e[1:])
+
     plt.show()
     exit(0)
 
@@ -47,7 +56,8 @@ if __name__ == "__main__":
     vlimit = (-0.5, 0.5)
     rlimit = (-0.3, 0.3)
     # input_limits = [(-154, 154), (-50, 50), (-15, 15)]
-    input_limits = [(-50, 154), (-50, 50), (-15, 15)]
+    input_limits = [(0, 150), (-0.1, 0.1), (-1, 1)]
+    # input_limits = [(-, ), (-1, 1), (-1, 1)]
     state_limits = [xlimit, ylimit, (-pi, pi), (-0.25, 0.5), (-1.0, 1.0), (-0.1, 0.1)]
     # setup the environment
     planning_env = ControlSpace(obstacle_list, start, goal,

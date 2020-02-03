@@ -159,3 +159,6 @@ class ControlSpace(object):
                 x = [plan[i, 0], plan[i + 1, 0]]
                 y = [plan[i, 1], plan[i + 1, 1]]
                 plt.plot(y, x, 'r')
+            # u_e = np.cos(plan[:, 2]) * plan[:, 3] - np.sin(plan[:, 2]) * plan[:, 4]
+            # v_e = np.sin(plan[:, 2]) * plan[:, 3] + np.cos(plan[:, 2]) * plan[:, 4]
+            # plt.quiver(plan[:,:2], u_e, v_e)

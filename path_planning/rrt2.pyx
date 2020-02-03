@@ -23,7 +23,8 @@ class RRTPlanner(object):
         self.goal_radius = goal_radius
         self.control_type = control_type
 
-    def plan(self, start_config, goal_config, goal_sample_rate=5, timeout=float(5), tmax=8):
+    def plan(self, start_config, goal_config, goal_sample_rate=5, timeout=float(5), tmax=8, velocity_current=None,
+             cmin=0):
         print(self.bounds)
         # Initialize an empty plan.
         plan = []
@@ -31,7 +32,6 @@ class RRTPlanner(object):
         # Start with adding the start configuration to the tree.
         self.tree.add_vertex(start_config)
         self.tree.set_cost(0, 0)
-        cmin = 0
         v_min_id = None
         start_time = time()
         while True:
@@ -43,7 +43,8 @@ class RRTPlanner(object):
             u_rand = self.planning_env.sample_control()
             v_nearest_id, _ = self.tree.get_nearest_vertex(x_rand, c_rand, wy=0.5)
             v_nearest = self.tree.vertices[v_nearest_id]
-            v_new = self.propagate(v_nearest, u_rand, t_rand, control_type=self.control_type)
+            v_new = self.propagate(v_nearest, u_rand, t_rand, control_type=self.control_type,
+                                   v_current=velocity_current)
             if self.planning_env.state_validity_checker(v_new):
                 if self.planning_env.edge_validity_checker(v_nearest, v_new):
                     v_new_id = len(self.tree.vertices)
@@ -52,9 +53,10 @@ class RRTPlanner(object):
                     self.tree.set_cost(v_new_id,
                                        self.tree.cost[v_nearest_id] +
                                        self.planning_env.compute_distance(v_nearest, v_new,
-                                                                          w=(None, None, None, None, None, None)) +
-                                       100 * t_rand * abs(v_new[4]) + 100 * t_rand * abs(v_new[5]) +
-                                       t_rand * 10)
+                                                                          w=(None, None, 10, None, None, None)) +
+                                       t_rand * abs(v_new[4]))
+                    # +
+                    #                    t_rand)
 
                     if self.planning_env.goal_radius_reached(v_new, r=self.goal_radius) and \
                             (v_min_id is None or self.tree.cost[v_new_id] < self.tree.cost[v_min_id]):
@@ -80,7 +82,7 @@ class RRTPlanner(object):
 
         return np.array(plan), total_cost, self.tree
 
-    def propagate(self, x_nearest, u, t, control_type):
+    def propagate(self, x_nearest, u, t, control_type, v_current=None):
         """
 
         :param control_type:
@@ -123,9 +125,9 @@ class RRTPlanner(object):
         Nrr = -26.4
         m = 63.2
         I = 12.1
-        Nr = -11.75
-        Xu = -29
-        Yv = -20
+        Nr = 11.75
+        Xu = 29
+        Yv = 20
 
         if control_type == 'force':
             # Calculate accelerations:
@@ -136,27 +138,40 @@ class RRTPlanner(object):
         elif control_type == 'acceleration':
             udot = u[0]
             vdot = u[1]
-            rdot = u[3]
+            rdot = u[2]
         else:
             raise Exception(
                 'control type should be force or acceleration. Value of control_type was: {}'.format(control_type))
         # surge
         surge = max(self.ulimit[0], min(udot * t + surge_0, self.ulimit[1]))
         # sway
-        # TODO introduce sway
-        sway = 0
+        sway = max(self.vlimit[0], min(vdot * t + sway_0, self.ulimit[1]))
         # Yaw speed
         r = max(self.rlimit[0], min(vdot * t + r_0, self.rlimit[1]))
         # Yaw
         psi = (rdot * t * t + r_0) / 2 + psi_0
         psi = (psi + pi) % (2 * pi) - pi
 
-        x_point = ((surge * cos(psi) - sway * sin(psi)) +
-                   (surge_0 * cos(psi_0) - sway_0 * sin(psi_0))) / 2 * t + \
+        cpsi0 = cos(psi_0)
+        spsi0 = sin(psi_0)
+        cpsi = cos(psi)
+        spsi = sin(psi)
+        # if v_current is not None:
+        # u_c0 = cpsi0 * v_current[0] - spsi0 * v_current[1]
+        # v_c0 = spsi0 * v_current[0] + cpsi0 * v_current[1]
+        # u_c = cpsi * v_current[0] - spsi * v_current[1]
+        # v_c = spsi * v_current[0] + cpsi * v_current[1]
+
+        x_point = ((surge * cpsi - sway * spsi) +
+                   (surge_0 * cpsi0 - sway_0 * spsi0)) / 2 * t + \
                   x_nearest[0]
-        y_point = ((surge * sin(psi) + sway * cos(psi)) +
-                   (surge_0 * sin(psi_0) + sway_0 * cos(psi_0))) / 2 * t + \
+        y_point = ((surge * spsi + sway * cpsi) +
+                   (surge_0 * spsi0 + sway_0 * cpsi0)) / 2 * t + \
                   x_nearest[1]
+        if v_current is not None:
+            x_point += v_current[0] * t
+            y_point += v_current[1] * t
+
         x_new = np.array([x_point, y_point, psi, surge, sway, r])
 
         return x_new
