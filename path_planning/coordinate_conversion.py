@@ -13,10 +13,10 @@ from string import Template
 class AuvPath:
 
 
-    def __init__(self, lat_0, lon_0):
+    def __init__(self, lat_0, lon_0, local_path=None):
         self.lat_0 = lat_0
         self.lon_0 = lon_0
-        self.local_path = None
+        self.local_path = local_path
         self.geodetic_path = None
         self.xml = None
 
@@ -31,6 +31,15 @@ class AuvPath:
             wr = csv.writer(f)
             for p in robot_path:
                 wr.writerow(p)
+
+    def load_csv(self, file_path):
+        data = []
+        with open(file_path, 'r') as f:
+            data_reader = csv.reader(f, quoting=csv.QUOTE_NONNUMERIC)
+            for row in data_reader:
+                data.append(row)
+
+        self.local_path = data
 
     def get_geodetic_path(self):
         self.geodetic_path = [pymap3d.ned2geodetic(p[1], p[0], 2, self.lat_0, self.lon_0, 0)
