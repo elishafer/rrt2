@@ -1,3 +1,4 @@
+# cython: profile=True
 import operator
 from math import sqrt
 
@@ -8,8 +9,8 @@ class RRTTree(object):
 
         self.planning_env = planning_env
         self.vertices = []
-        self.edges = dict()
-        self.cost = dict()
+        self.edges = [0]
+        self.cost = []
 
     def get_root_id(self):
         '''
@@ -17,7 +18,7 @@ class RRTTree(object):
         '''
         return 0
 
-    def get_nearest_vertex(self, state, sample_cost, wx=(None, None, None, None, None, None), wy=1):
+    def get_nearest_vertex(self, state, sample_cost, wx, wy=1):
         '''
         Returns the nearest state ID in the tree.
         :param sample_cost:
@@ -51,12 +52,27 @@ class RRTTree(object):
         @param sid start state ID
         @param eid end state ID
         '''
-        self.edges[eid] = sid
+        self.edges.append(sid)
 
     def set_cost(self, vid, cost):
-        self.cost[vid] = cost
+        self.cost.append(cost)
 
     def reset_tree(self):
         self.vertices = []
-        self.edges = dict()
-        self.cost = dict()
+        self.edges = []
+        self.cost = []
+
+    def remove_vertices(self, max_cost, v_min_id):
+        i = len(self.vertices) - 1
+        while i >= 0:
+            if self.cost[i] > max_cost:
+                del self.cost[i]
+                del self.vertices[i]
+                del self.edges[i]
+                for j in range(i, len(self.edges)):
+                    if self.edges[j] > i:
+                        self.edges[j] -= 1
+                if v_min_id > i:
+                    v_min_id -= 1
+            i -= 1
+        return v_min_id

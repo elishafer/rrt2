@@ -1,3 +1,4 @@
+# cython: profile=True
 import numpy as np
 from math import sqrt
 from math import pi
@@ -6,6 +7,7 @@ from copy import deepcopy
 
 import matplotlib.pyplot as plt
 from matplotlib.collections import PatchCollection
+import cython
 
 
 class ControlSpace(object):
@@ -32,7 +34,8 @@ class ControlSpace(object):
         if not self.state_validity_checker(start) or not self.state_validity_checker(goal):
             raise ValueError('Start and Goal state must be within the map limits')
 
-    def compute_distance(self, start_state, end_state, squared=False, w=(None, None, 0, 0, 0, 0)):
+    @cython.profile(False)
+    def compute_distance(self, start_state, end_state, w, squared=False):
         sum = 0
         for i, start_var in enumerate(start_state):
             if w[i] is not None:
@@ -119,7 +122,7 @@ class ControlSpace(object):
     def goal_radius_reached(self, state, r=5):
         goal_p = deepcopy(self.goal)
         goal_p = [state[i] if goal_var is None else goal_var for i, goal_var in enumerate(goal_p)]
-        return self.compute_distance(goal_p, state) < r
+        return self.compute_distance(goal_p, state, w=(None, None, 0, 0, 0, 0)) < r
 
     def visualize_plan(self, plan=None, visited=None, tree=None, title=None, rnd=None):
         '''
@@ -132,7 +135,7 @@ class ControlSpace(object):
             plt.plot(rnd[1], rnd[0], "^k")
         if tree is not None:
             nodes = tree.vertices
-            for k, v in tree.edges.items():
+            for k, v in enumerate(tree.edges):
                 plt.plot([nodes[k][1], nodes[v][1]], [
                     nodes[k][0], nodes[v][0]], "-g")
 

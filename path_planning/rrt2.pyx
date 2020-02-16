@@ -1,3 +1,4 @@
+# cython: profile=True
 import numpy as np
 from rrt_tree import RRTTree
 import random
@@ -24,7 +25,7 @@ class RRTPlanner(object):
         self.control_type = control_type
 
     def plan(self, start_config, goal_config, goal_sample_rate=5, timeout=float(5), tmax=8, velocity_current=None,
-             cmin=0):
+             cmin=0, weights=(None, None, 10, None, None, 10)):
         print(self.bounds)
         # Initialize an empty plan.
         plan = []
@@ -41,27 +42,26 @@ class RRTPlanner(object):
             c_rand = random.uniform(0, cmin)
             t_rand = random.uniform(0, tmax)
             u_rand = self.planning_env.sample_control()
-            v_nearest_id, _ = self.tree.get_nearest_vertex(x_rand, c_rand, wy=0.5)
+            v_nearest_id, _ = self.tree.get_nearest_vertex(x_rand, c_rand, wx=weights, wy=0.5)
             v_nearest = self.tree.vertices[v_nearest_id]
             v_new = self.propagate(v_nearest, u_rand, t_rand, control_type=self.control_type,
                                    v_current=velocity_current)
             if self.planning_env.state_validity_checker(v_new):
                 if self.planning_env.edge_validity_checker(v_nearest, v_new):
-                    v_new_id = len(self.tree.vertices)
-                    self.tree.add_vertex(v_new)
-                    self.tree.add_edge(v_nearest_id, v_new_id)
-                    self.tree.set_cost(v_new_id,
-                                       self.tree.cost[v_nearest_id] +
-                                       self.planning_env.compute_distance(v_nearest, v_new,
-                                                                          w=(None, None, 10, None, None, None)) +
-                                       t_rand * abs(v_new[4]))
-                    # +
-                    #                    t_rand)
+                    new_cost = self.tree.cost[v_nearest_id] + \
+                               self.planning_env.compute_distance(v_nearest, v_new, w=weights) + \
+                               t_rand * abs(v_new[4])
+                    if cmin == 0 or new_cost < cmin:
+                        v_new_id = len(self.tree.vertices)
+                        self.tree.add_vertex(v_new)
+                        self.tree.add_edge(v_nearest_id, v_new_id)
+                        self.tree.set_cost(v_new_id, new_cost)
 
-                    if self.planning_env.goal_radius_reached(v_new, r=self.goal_radius) and \
-                            (v_min_id is None or self.tree.cost[v_new_id] < self.tree.cost[v_min_id]):
-                        v_min_id = v_new_id
-                        cmin = self.tree.cost[v_new_id]
+                        if self.planning_env.goal_radius_reached(v_new, r=self.goal_radius) and \
+                                (v_min_id is None or self.tree.cost[v_new_id] < self.tree.cost[v_min_id]):
+                            v_min_id = v_new_id
+                            cmin = self.tree.cost[v_new_id]
+                            v_min_id = self.tree.remove_vertices(cmin, v_min_id)
 
             # self.planning_env.visualize_plan(tree=self.tree, rnd=x_rand[:2])
 
@@ -98,8 +98,8 @@ class RRTPlanner(object):
         I = 12.1
         Added mass:
         Nr = -11.75
-        Xu = -56.48 or -29 (adj)
-        Yv = -60.817 or -20
+        Xu = -29
+        Yv = -20
 
         Forces:
         N = 15 (or maybe 150?)
