@@ -8,9 +8,11 @@ import random
 import numpy as np
 import yaml
 from primatives import mynorm, is_path_collision_free, safety_cost_func
+import time
+import pickle
 
 show_animation = False
-debug = False
+debug = True
 
 if debug == True:
     import matplotlib.pyplot as plt
@@ -19,11 +21,11 @@ if debug == True:
 
 class RrtStar:
 
-    def __init__(self, start, goal, c_space_bounds, obstacle_list, max_iterations=3000,
+    def __init__(self, start, goal, c_space_bounds, obstacle_list, timeout=1,
                  max_extend=4.0, goal_sample_rate=1):
         self.start = start
         self.goal = goal
-        self.max_iterations = max_iterations
+        self.timeout = timeout
         self.nodes = [Node(start)]
         self.c_space_bounds = c_space_bounds
         self.obstacle_list = obstacle_list
@@ -101,8 +103,9 @@ class RrtStar:
         eta = self.max_extend * 8.0
         c_space_size = [x[1] - x[0] for x in self.c_space_bounds]
         # Checkout gamma in Karaman Frazzoli 2011. Also in documentation
-        gamma = 0.9972 * sqrt(np.prod(c_space_size))*1.2
-        for i in range(self.max_iterations):
+        gamma = 0.9972 * sqrt(np.prod(c_space_size)) * 1.2
+        start_time = time.time()
+        while time.time() - start_time < self.timeout:
             x_rand = self.sample_free(self.c_space_bounds)
             x_nearest, x_min_ind = self.find_nearest(x_rand, self.nodes)
             x_new = self.steer(x_nearest.x, x_rand, self.max_extend)
