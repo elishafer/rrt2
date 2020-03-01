@@ -42,14 +42,15 @@ class AuvPath:
         self.local_path = data
 
     def get_geodetic_path(self):
-        self.geodetic_path = [pymap3d.ned2geodetic(p[1], p[0], 2, self.lat_0, self.lon_0, 0)
+        self.geodetic_path = [pymap3d.ned2geodetic(p[0], p[1], 3, self.lat_0, self.lon_0, 0)
                               for p in self.local_path]
         return self.geodetic_path
 
     def create_xml(self, file_path):
-
         sparus_xml = SparusXml()
-        sparus_xml.create_full_xml(self.geodetic_path)
+        if self.geodetic_path is None:
+            self.get_geodetic_path()
+        sparus_xml.create_full_xml(self.geodetic_path, self.local_path)
         self.xml = sparus_xml.xml
         with open(file_path, 'w') as f:
             f.write(self.xml)
@@ -91,7 +92,7 @@ class SparusXml:
                                         <z>2.0</z>
                                         <altitude_mode>False</altitude_mode>
                                       </final_position>
-                                      <speed>0.5</speed>
+                                      <speed>$speed</speed>
                                       <tolerance>
                                         <x>2.0</x>
                                         <y>2.0</y>
@@ -100,17 +101,18 @@ class SparusXml:
                                     </maneuver>
                                   </mission_step>'''))
 
-    def create_full_xml(self, robot_path):
+    def create_full_xml(self, robot_path, local_path):
 
         self.xml = '<mission>\n'
         self.xml += self.waypoint_template.substitute(lat=robot_path[0][0],
                                                       lon=robot_path[0][1])
-        for i,p_1 in enumerate(robot_path):
+        for i, p_1 in enumerate(robot_path):
             if i != 0:
                 self.xml += self.section_template.substitute(lat_0=p_0[0],
                                                              lon_0=p_0[1],
                                                              lat_1=p_1[0],
-                                                             lon_1=p_1[1])
+                                                             lon_1=p_1[1],
+                                                             speed=local_path[i][3])
             p_0 = p_1
         self.xml += self.waypoint_template.substitute(lat=robot_path[-1][0],
                                                       lon=robot_path[-1][1])
