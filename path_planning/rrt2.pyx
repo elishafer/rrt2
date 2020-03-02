@@ -1,4 +1,5 @@
-# cython: profile=True
+# cython: language_level=3, boundscheck=False
+
 import numpy as np
 from rrt_tree import RRTTree
 import random

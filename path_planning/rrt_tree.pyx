@@ -1,4 +1,6 @@
 # cython: profile=True
+# cython: language_level=3, boundscheck=False
+
 import operator
 from math import sqrt
 
@@ -59,7 +61,7 @@ class RRTTree(object):
 
     def reset_tree(self):
         self.vertices = []
-        self.edges = []
+        self.edges = [0]
         self.cost = []
 
     def remove_vertices(self, max_cost, v_min_id):

@@ -1,9 +1,10 @@
 # import argparse
 import yaml
 from math import pi
+from statistics import mean, stdev
 from matplotlib import pyplot as plt
 import numpy as np
-from coordinate_conversion import AuvPath
+# from coordinate_conversion import AuvPath
 
 from rrt2 import RRTPlanner
 from control_space_env import ControlSpace
@@ -15,27 +16,34 @@ def main(planning_env, planner, start, goal):
     print('Starting plan')
 
     # Plan.
-    plan, total_cost, tree = planner.plan(start, goal, timeout=20, tmax=8, velocity_current=(0, 0.3), cmin=150,
-                                          weights=(None, None, None, None, None, None), goal_sample_rate=5)
+    total_costs = []
+    for x in range(20):
+        plan, total_cost, tree = planner.plan(start, goal, timeout=1, tmax=8, velocity_current=(0, 0.3), cmin=0,
+                                              weights=(None, None, None, None, None, None), goal_sample_rate=5)
+        total_costs.append(total_cost)
+        tree.reset_tree()
 
     print(plan)
     print(total_cost)
+    print(total_costs)
+    print('avg', mean(total_costs))
+    print('std', stdev(total_costs))
 
     # Visualize the final path.
-    if plan is not None:
-        xml_plan = AuvPath(32.82732, 34.954897, local_path=np.flip(plan, 0))
-        xml_plan.create_xml('/home/elisei/catkin_ws/src/cola2_sparus2/missions/my_plan.xml')
-
-        planning_env.visualize_plan(plan, tree=tree)
-        plan[0, 2] = 0
-        plan = plan.astype(float)
-        u_e = np.cos(plan[:, 2]) * plan[:, 3] - np.sin(plan[:, 2]) * plan[:, 4]
-        v_e = np.sin(plan[:, 2]) * plan[:, 3] + np.cos(plan[:, 2]) * plan[:, 4]
-        plt.quiver(plan[1:, 1], plan[1:, 0], v_e[1:], u_e[1:])
-    else:
-        planning_env.visualize_plan(tree=tree)
-
-    plt.show()
+    # if plan is not None:
+    #     xml_plan = AuvPath(32.82732, 34.954897, local_path=np.flip(plan, 0))
+    #     xml_plan.create_xml('/home/elisei/catkin_ws/src/cola2_sparus2/missions/my_plan.xml')
+    #
+    #     planning_env.visualize_plan(plan, tree=tree)
+    #     plan[0, 2] = 0
+    #     plan = plan.astype(float)
+    #     u_e = np.cos(plan[:, 2]) * plan[:, 3] - np.sin(plan[:, 2]) * plan[:, 4]
+    #     v_e = np.sin(plan[:, 2]) * plan[:, 3] + np.cos(plan[:, 2]) * plan[:, 4]
+    #     plt.quiver(plan[1:, 1], plan[1:, 0], v_e[1:], u_e[1:])
+    # else:
+    #     planning_env.visualize_plan(tree=tree)
+    #
+    # plt.show()
     exit(0)
 
 
