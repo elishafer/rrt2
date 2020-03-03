@@ -25,19 +25,28 @@ class RRTPlanner(object):
         self.goal_radius = goal_radius
         self.control_type = control_type
 
-    def plan(self, start_config, goal_config, goal_sample_rate=5, timeout=float(5), tmax=8, velocity_current=None,
+    def plan(self, start_config, goal_config, times, goal_sample_rate=5, tmax=8, velocity_current=None,
              cmin=0, weights=(None, None, 10, None, None, 10)):
-        print(self.bounds)
+        # print(self.bounds)
         # Initialize an empty plan.
         plan = []
-
+        total_costs = np.zeros(len(times))
+        is_success_list = np.zeros(len(times))
         # Start with adding the start configuration to the tree.
         self.tree.add_vertex(start_config)
         self.tree.set_cost(0, 0)
         v_min_id = None
         start_time = time()
         while True:
-            if time() - start_time > timeout:
+            for tm_ind, tm in enumerate(times):
+                if (time() - start_time > tm):
+                    if v_min_id is not None:
+                        is_success_list[tm_ind] = 1.0
+                        total_costs[tm_ind] = self.tree.cost[v_min_id]
+                    else:
+                        is_success_list[tm_ind] = 0.0
+                        total_costs[tm_ind] = 0.0
+            if (time() - start_time > times[-1]):
                 break
             x_rand = self.planning_env.sample(goal_sample_rate)
             c_rand = random.uniform(0, cmin)
@@ -50,8 +59,7 @@ class RRTPlanner(object):
             if self.planning_env.state_validity_checker(v_new):
                 if self.planning_env.edge_validity_checker(v_nearest, v_new):
                     new_cost = self.tree.cost[v_nearest_id] + \
-                               self.planning_env.compute_distance(v_nearest, v_new, w=weights) + \
-                               t_rand * abs(v_new[4])
+                               self.planning_env.compute_distance(v_nearest, v_new, w=weights) # + t_rand * abs(v_new[4])
                     if cmin == 0 or new_cost < cmin:
                         v_new_id = len(self.tree.vertices)
                         self.tree.add_vertex(v_new)
@@ -62,17 +70,17 @@ class RRTPlanner(object):
                                 (v_min_id is None or self.tree.cost[v_new_id] < self.tree.cost[v_min_id]):
                             v_min_id = v_new_id
                             cmin = self.tree.cost[v_new_id]
-                            v_min_id = self.tree.remove_vertices(cmin, v_min_id)
+                            v_min_id = self.tree.prune_tree(cmin, v_min_id) # same vertex, new id
 
             # self.planning_env.visualize_plan(tree=self.tree, rnd=x_rand[:2])
 
         best_vid = v_min_id
         if best_vid is None:
-            print('goal not reached')
-            return None, None, self.tree
-        print('goal reached!')
+            # print('goal not reached')
+            return None, is_success_list, total_costs, None
+        # print('goal reached!')
         total_cost = self.tree.cost[best_vid]
-        print('Total cost: ', total_cost)
+        # print('Total cost: ', total_cost)
         plan.append(goal_config)
         last_index = best_vid
         while self.tree.edges[last_index] != 0:
@@ -80,8 +88,8 @@ class RRTPlanner(object):
             last_index = self.tree.edges[last_index]
         plan.append(start_config)
 
-
-        return np.array(plan), total_cost, self.tree
+        # return np.array(plan), total_cost, self.tree
+        return np.array(plan), is_success_list, total_costs, self.tree
 
     def propagate(self, x_nearest, u, t, control_type, v_current=None):
         """

@@ -104,7 +104,7 @@ class ControlSpace(object):
             x_rand.append(random.uniform(*self.ulimit))
             x_rand.append(random.uniform(*self.vlimit))
             x_rand.append(random.uniform(*self.rlimit))
-        else:
+        else: 
             x_rand = list(self.goal)
             if self.goal[2] is None:
                 x_rand[2] = random.uniform(*self.psilimit)

@@ -64,10 +64,10 @@ class RRTTree(object):
         self.edges = [0]
         self.cost = []
 
-    def remove_vertices(self, max_cost, v_min_id):
+    def prune_tree(self, max_cost, v_min_id):
         i = len(self.vertices) - 1
         while i >= 0:
-            if self.cost[i] > max_cost:
+            if self.cost[i] > max_cost: # max_cost = cmin
                 del self.cost[i]
                 del self.vertices[i]
                 del self.edges[i]
