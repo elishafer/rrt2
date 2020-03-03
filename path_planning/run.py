@@ -16,22 +16,25 @@ def main(planning_env, planner, start, goal):
 	# print('Starting plan')
 
 	# Plan.
-	# cmin_values = [150, 250, 350, 450]
-	cmin_values = [150]
-	times = range(1, 16)
-	num_iters = 10
-	all_success_counts = np.zeros(len(times))
-	all_total_costs = np.zeros(len(times))
-	for cmin_val in cmin_values:
-		for ni in range(num_iters):
-			plan, is_success_list, total_costs, tree = planner.plan(start, goal, times, tmax=8, velocity_current=(0, 0.3), cmin=cmin_val, \
-													  weights=(None, None, None, None, None, None), goal_sample_rate=5)
-			all_success_counts += is_success_list
-			all_total_costs += total_costs
+	cmin_val = 150
+	times = range(1,21)
+	num_iters = 25
 
-	# avg_total_costs = all_total_costs / all_success_counts
-	print(all_total_costs)
-	print(all_success_counts)
+	for tm in times:
+		success_count = 0.0
+		total_cost = 0.0
+		for ni in range(num_iters):
+			plan, cost, tree = planner.plan(start, goal, timeout=tm, tmax=8, velocity_current=(0, 0.3), cmin=cmin_val, \
+													  weights=(None, None, None, None, None, None), goal_sample_rate=5)
+			planner.tree.reset_tree()
+			if plan is not None:
+				success_count += 1
+				total_cost += cost 
+		if (success_count == 0):
+			print(f"{tm} {success_count} {0}")
+		else:
+			print(f"{tm} {success_count/float(num_iters)} {total_cost/float(success_count)}")
+
 	'''
 	total_costs = []
 	
@@ -56,24 +59,24 @@ def main(planning_env, planner, start, goal):
 		print(f"{tm} {float(successes)/float(num_iters)} {np.mean(total_costs)} {np.std(total_costs, ddof=1)}")
 # 
 	'''
-	plan, total_cost, tree = planner.plan(start, goal, timeout=8, tmax=15, velocity_current=(0, 0.3), cmin=10,
-												  weights=(None, None, None, None, None, None), goal_sample_rate=5)
+	# plan, total_cost, tree = planner.plan(start, goal, timeout=8, tmax=15, velocity_current=(0, 0.3), cmin=10,
+	# 											  weights=(None, None, None, None, None, None), goal_sample_rate=5)
 	# Visualize the final path.
-	if plan is not None:
-	    # xml_plan = AuvPath(32.82732, 34.954897, local_path=np.flip(plan, 0))
-	    # xml_plan.create_xml('/home/elisei/catkin_ws/src/cola2_sparus2/missions/my_plan.xml')
+	# if plan is not None:
+	#     # xml_plan = AuvPath(32.82732, 34.954897, local_path=np.flip(plan, 0))
+	#     # xml_plan.create_xml('/home/elisei/catkin_ws/src/cola2_sparus2/missions/my_plan.xml')
 	
-	    planning_env.visualize_plan(plan, tree=tree)
-	    plan[0, 2] = 0
-	    plan = plan.astype(float)
-	    u_e = np.cos(plan[:, 2]) * plan[:, 3] - np.sin(plan[:, 2]) * plan[:, 4]
-	    v_e = np.sin(plan[:, 2]) * plan[:, 3] + np.cos(plan[:, 2]) * plan[:, 4]
-	    plt.quiver(plan[1:, 1], plan[1:, 0], v_e[1:], u_e[1:])
-	else:
-	    planning_env.visualize_plan(tree=tree)
+	#     planning_env.visualize_plan(plan, tree=tree)
+	#     plan[0, 2] = 0
+	#     plan = plan.astype(float)
+	#     u_e = np.cos(plan[:, 2]) * plan[:, 3] - np.sin(plan[:, 2]) * plan[:, 4]
+	#     v_e = np.sin(plan[:, 2]) * plan[:, 3] + np.cos(plan[:, 2]) * plan[:, 4]
+	#     plt.quiver(plan[1:, 1], plan[1:, 0], v_e[1:], u_e[1:])
+	# else:
+	#     planning_env.visualize_plan(tree=tree)
 	
-	plt.show()
-	exit(0)
+	# plt.show()
+	# exit(0)
 
 
 if __name__ == "__main__":
@@ -89,12 +92,13 @@ if __name__ == "__main__":
 	# args = parser.parse_args()
 
 	with open('obstacle_list.yaml') as obstacle_file:
-		scenario_name = 'mlo_4'
+		scenario_name = 'mlo_3'
 		obstacle_dict = yaml.load(obstacle_file)
 		obstacle_list = obstacle_dict[scenario_name]['obstacles']
 		local_goal = obstacle_dict[scenario_name]['goal']
-		local_start = [0, 0]
-	start = (0, 0, 0, 0, 0, 0)
+		local_start = obstacle_dict[scenario_name]['start']
+		# local_start = [0, 0]
+	start = (local_start[0], local_start[1], 0, 0, 0, 0)
 	# goal = (80, -15, None, 0, None, None)
 	goal = (local_goal[0], local_goal[1], None, 0, None, None)
 	xlimit = (0, 100)

@@ -25,28 +25,18 @@ class RRTPlanner(object):
         self.goal_radius = goal_radius
         self.control_type = control_type
 
-    def plan(self, start_config, goal_config, times, goal_sample_rate=5, tmax=8, velocity_current=None,
+    def plan(self, start_config, goal_config, timeout=10, goal_sample_rate=5, tmax=8, velocity_current=None,
              cmin=0, weights=(None, None, 10, None, None, 10)):
         # print(self.bounds)
         # Initialize an empty plan.
         plan = []
-        total_costs = np.zeros(len(times))
-        is_success_list = np.zeros(len(times))
         # Start with adding the start configuration to the tree.
         self.tree.add_vertex(start_config)
         self.tree.set_cost(0, 0)
         v_min_id = None
         start_time = time()
         while True:
-            for tm_ind, tm in enumerate(times):
-                if (time() - start_time > tm):
-                    if v_min_id is not None:
-                        is_success_list[tm_ind] = 1.0
-                        total_costs[tm_ind] = self.tree.cost[v_min_id]
-                    else:
-                        is_success_list[tm_ind] = 0.0
-                        total_costs[tm_ind] = 0.0
-            if (time() - start_time > times[-1]):
+            if (time() - start_time > timeout):
                 break
             x_rand = self.planning_env.sample(goal_sample_rate)
             c_rand = random.uniform(0, cmin)
@@ -77,7 +67,7 @@ class RRTPlanner(object):
         best_vid = v_min_id
         if best_vid is None:
             # print('goal not reached')
-            return None, is_success_list, total_costs, None
+            return None, None, None
         # print('goal reached!')
         total_cost = self.tree.cost[best_vid]
         # print('Total cost: ', total_cost)
@@ -88,8 +78,7 @@ class RRTPlanner(object):
             last_index = self.tree.edges[last_index]
         plan.append(start_config)
 
-        # return np.array(plan), total_cost, self.tree
-        return np.array(plan), is_success_list, total_costs, self.tree
+        return np.array(plan), total_cost, self.tree
 
     def propagate(self, x_nearest, u, t, control_type, v_current=None):
         """
