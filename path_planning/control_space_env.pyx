@@ -14,23 +14,16 @@ import cython
 class ControlSpace(object):
 
     def __init__(self, obstacle_list, start, goal,
-                 xlimit, ylimit, vlimit,
-                 ulimit, rlimit,
-                 input_limits):
+                 input_limits, state_limits):
 
         # Obtain the boundary limits.
         # Check if file exists.
         self.goal = goal
         self.start = start
         self.obstacle_list = obstacle_list
-        self.xlimit = xlimit
-        self.ylimit = ylimit
-        self.psilimit = (-pi, pi)
-        self.vlimit = vlimit
-        self.ulimit = ulimit
-        self.rlimit = rlimit
-        self.map_bounds = [self.xlimit, self.ylimit]
         self.input_limits = input_limits
+        self.state_limits = state_limits
+        self.map_bounds = [self.state_limits[0], self.state_limits[1]]
         # Check if start and goal are within limits and collision free
         if not self.state_validity_checker(start) or not self.state_validity_checker(goal):
             raise ValueError('Start and Goal state must be within the map limits')
@@ -99,21 +92,12 @@ class ControlSpace(object):
         :return:
         """
         if random.randint(0, 100) > goal_sample_rate:
-            x_rand = [random.uniform(x[0], x[1]) for x in self.map_bounds]
-            x_rand.append(random.uniform(*self.psilimit))
-            x_rand.append(random.uniform(*self.ulimit))
-            x_rand.append(random.uniform(*self.vlimit))
-            x_rand.append(random.uniform(*self.rlimit))
-        else: 
+            x_rand = [random.uniform(*x) for x in self.state_limits]
+        else:
             x_rand = list(self.goal)
-            if self.goal[2] is None:
-                x_rand[2] = random.uniform(*self.psilimit)
-            if self.goal[3] is None:
-                x_rand[3] = random.uniform(*self.ulimit)
-            if self.goal[4] is None:
-                x_rand[4] = random.uniform(*self.vlimit)
-            if self.goal[5] is None:
-                x_rand[5] = random.uniform(*self.rlimit)
+            for i, var in enumerate(x_rand):
+                if var is None:
+                    x_rand[i] = random.uniform(*self.state_limits[i])
         x_rand = np.array(x_rand)
         return x_rand
 

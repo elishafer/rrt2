@@ -118,9 +118,7 @@ if __name__ == "__main__":
 	state_limits = [xlimit, ylimit, (-pi, pi), ulimit, vlimit, rlimit]
 	# setup the environment
 	planning_env = ControlSpace(obstacle_list, start, goal,
-								xlimit, ylimit, vlimit,
-								ulimit, rlimit,
-								input_limits)
+								input_limits, state_limits)
 	planner = RRTPlanner(planning_env, state_limits, control_type='force')
 
 	# # Next setup the planner
