@@ -6,7 +6,6 @@ import random
 from math import sin, cos, pi
 from copy import deepcopy
 from time import time
-from control_space_env import ControlSpace
 
 
 class RRTPlanner(object):
@@ -15,9 +14,6 @@ class RRTPlanner(object):
         self.planning_env = planning_env
         self.tree = RRTTree(self.planning_env)
         self.bounds = self.planning_env.map_bounds
-        self.xlimit = state_limits[0]
-        self.ylimit = state_limits[1]
-        self.psilimit = state_limits[2]
         self.ulimit = state_limits[3]
         self.vlimit = state_limits[4]
         self.rlimit = state_limits[5]
@@ -143,7 +139,7 @@ class RRTPlanner(object):
         # surge
         surge = max(self.ulimit[0], min(udot * t + surge_0, self.ulimit[1]))
         # sway
-        sway = max(self.vlimit[0], min(vdot * t + sway_0, self.ulimit[1]))
+        sway = max(self.vlimit[0], min(vdot * t + sway_0, self.vlimit[1]))
         # Yaw speed
         r = max(self.rlimit[0], min(vdot * t + r_0, self.rlimit[1]))
         # Yaw
@@ -154,11 +150,6 @@ class RRTPlanner(object):
         spsi0 = sin(psi_0)
         cpsi = cos(psi)
         spsi = sin(psi)
-        # if v_current is not None:
-        # u_c0 = cpsi0 * v_current[0] - spsi0 * v_current[1]
-        # v_c0 = spsi0 * v_current[0] + cpsi0 * v_current[1]
-        # u_c = cpsi * v_current[0] - spsi * v_current[1]
-        # v_c = spsi * v_current[0] + cpsi * v_current[1]
 
         x_point = ((surge * cpsi - sway * spsi) +
                    (surge_0 * cpsi0 - sway_0 * spsi0)) / 2 * t + \
@@ -173,30 +164,3 @@ class RRTPlanner(object):
         x_new = np.array([x_point, y_point, psi, surge, sway, r])
 
         return x_new
-
-
-if __name__ == '__main__':
-    import yaml
-
-    with open('obstacle_list.yaml') as obstacle_file:
-        scenario_name = 'mlo_3'
-        obstacle_dict = yaml.load(obstacle_file)
-        obstacle_list = obstacle_dict[scenario_name]['obstacles']
-        # obstacle_list = 57.3 * np.array(obstacle_dict[scenario_name]['obstacles']) / 6366707.0
-        # start = 57.3 * np.array(obstacle_dict[scenario_name]['start']) / 6366707.0 + start
-        local_goal = obstacle_dict[scenario_name]['goal']
-        local_start = [0, 0]
-    start = (0, 0, 0, 0, 0, 0)
-    goal = (80, -15, None, None, None, None)
-    xlimit = (0, 100)
-    ylimit = (-50, 50)
-    vlimit = (-0.25, 0.5)
-    state_limits = [xlimit, ylimit, (-pi, pi), (-0.25, 0.5), (-1.0, 1.0), (-0.1, 0.1)]
-    planning_env = ControlSpace(obstacle_list, start, goal,
-                                xlimit, ylimit, vlimit)
-    planner = RRTPlanner(planning_env, state_limits)
-    plan, total_cost, tree = planner.plan(start, goal)
-
-    # planning_env.visualize_plan(plan, tree=tree)
-    # planning_env.visualize_plan(plan)
-    # plt.show()
