@@ -2,7 +2,6 @@
 # cython: language_level=3, boundscheck=False
 import numpy as np
 from math import sqrt
-from math import pi
 import random
 from copy import deepcopy
 
@@ -14,7 +13,7 @@ import cython
 class ControlSpace(object):
 
     def __init__(self, obstacle_list, start, goal,
-                 input_limits, state_limits):
+                 state_limits, input_limits=None):
 
         # Obtain the boundary limits.
         # Check if file exists.

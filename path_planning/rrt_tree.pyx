@@ -67,14 +67,22 @@ class RRTTree(object):
     def prune_tree(self, max_cost, v_min_id):
         i = len(self.vertices) - 1
         while i >= 0:
-            if self.cost[i] > max_cost: # max_cost = cmin
-                del self.cost[i]
-                del self.vertices[i]
-                del self.edges[i]
-                for j in range(i, len(self.edges)):
-                    if self.edges[j] > i:
-                        self.edges[j] -= 1
-                if v_min_id > i:
-                    v_min_id -= 1
+            if self.cost[i] > max_cost:  # max_cost = cmin
+                v_min_id = self.remove_vertex(v_min_id, i)
+            elif self.cost[i] > max_cost + \
+                    self.planning_env.compute_distance(self.vertices[i], self.planning_env.goal,
+                                                       w=(None, None, 0, 0, 0, 0)):
+                v_min_id = self.remove_vertex(v_min_id, i)
             i -= 1
+        return v_min_id
+
+    def remove_vertex(self, v_min_id, i):
+        del self.cost[i]
+        del self.vertices[i]
+        del self.edges[i]
+        for j in range(i, len(self.edges)):
+            if self.edges[j] > i:
+                self.edges[j] -= 1
+        if v_min_id > i:
+            v_min_id -= 1
         return v_min_id
