@@ -13,7 +13,7 @@
 #ifndef OMPLAPP_COMMON_CONFIG_
 #define OMPLAPP_COMMON_CONFIG_
 
-#define OMPLAPP_RESOURCE_DIR "/home/work/code/omplapp/resources"
+#define OMPLAPP_RESOURCE_DIR "/home/work/class/final_project/rrt2/omplapp/resources"
 
 /** Whether PQP was found */
 #define OMPL_HAS_PQP 0

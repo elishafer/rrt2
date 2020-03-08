@@ -1,15 +1,10 @@
 
 /* Author: John Noonan */
 
-#include <ompl/control/planners/est/EST.h>
-#include <ompl/control/planners/kpiece/KPIECE1.h>
-#include <ompl/control/planners/pdst/PDST.h>
 #include <ompl/control/planners/rrt/RRT.h>
 #include <ompl/control/planners/rrt/RRT2.h>
-#include <ompl/control/planners/rrt/RRT2pp.h>
 #include <ompl/control/planners/rrt/n1RRT2.h>
 #include <ompl/control/planners/rrt/n2RRT2.h>
-#include <ompl/control/planners/sst/SST.h>
 #include <ompl/tools/benchmark/Benchmark.h>
 #include <omplapp/apps/DynamicCarPlanning.h>
 #include <omplapp/config.h>
