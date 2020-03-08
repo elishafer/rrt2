@@ -27,6 +27,7 @@ class RRTPlanner3d(object):
         self.tree.set_cost(0, 0)
         v_min_id = None
         start_time = time()
+        time_to_init_sol = timeout
         while True:
             if (time() - start_time > timeout):
                 break
@@ -54,13 +55,15 @@ class RRTPlanner3d(object):
                             v_min_id = v_new_id
                             cmin = self.tree.cost[v_new_id]
                             v_min_id = self.tree.prune_tree(cmin, v_min_id)  # same vertex, new id
+                            time_to_init_sol = time() - start_time
+                            break
 
             # self.planning_env.visualize_plan(tree=self.tree, rnd=x_rand[:2])
 
         best_vid = v_min_id
         if best_vid is None:
             # print('goal not reached')
-            return None, None, None
+            return None, None, self.tree, time_to_init_sol
         # print('goal reached!')
         total_cost = self.tree.cost[best_vid]
         # print('Total cost: ', total_cost)
@@ -71,7 +74,7 @@ class RRTPlanner3d(object):
             last_index = self.tree.edges[last_index]
         plan.append(start_config)
 
-        return np.array(plan), total_cost, self.tree
+        return np.array(plan), total_cost, self.tree, time_to_init_sol
 
     def propagate(self, x_nearest, u, t, control_type, v_current=None):
         """

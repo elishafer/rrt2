@@ -5,10 +5,10 @@ from statistics import mean, stdev
 from matplotlib import pyplot as plt
 import numpy as np
 # from coordinate_conversion import AuvPath
-
 from rrt23d import RRTPlanner3d
 from rrt2 import RRTPlanner
 from control_space_env import ControlSpace
+import sys
 
 
 def main(planning_env, planner, planning_env3, planner3, start, goal):
@@ -88,6 +88,42 @@ def main(planning_env, planner, planning_env3, planner3, start, goal):
 	plt.show()
 	exit(0)
 
+def run_experiments(planning_env, planner, planning_env3, planner3, start, goal, times, num_runs, env_name):
+	costs_nRRT2,init_nRRT2 = {},{}
+	for tm in times:
+		costs_nRRT2[tm],init_nRRT2[tm] = [],[]
+	for tm in times:
+		print(f"Time: {tm}")
+		for rni in range(num_runs):
+			print(f"[{rni+1}/{num_runs}]")
+			plan, total_cost, tree, time_to_sol = planner3.plan(start[:3], goal[:3], timeout=tm, tmax=10, velocity_current=(0, 0.0), cmin=0,
+												   weights=(None, None, None), goal_sample_rate=5)
+			tree.reset_tree()
+			if total_cost is not None:
+				cmin = total_cost
+			else:
+				cmin = 0
+			plan, total_cost, tree, time_to_init_sol = planner.plan(start, goal, timeout=tm, tmax=10, velocity_current=(0, 0.0), cmin=cmin,
+												  weights=(None, None, None, None, None, None), goal_sample_rate=5)
+			if plan is not None:
+				costs_nRRT2[tm].append(total_cost)
+				init_nRRT2[tm].append(time_to_init_sol)
+
+			tree.reset_tree()
+	
+	print("Results for nRRT2:")
+	for tm in times:
+		costs = costs_nRRT2[tm]
+		inits = init_nRRT2[tm]
+		costs = [elem for elem in costs if abs(elem) > 1e-4]
+		inits = [elem for elem in inits if abs(elem) > 1e-4]
+		print(f"Time: {tm}")
+		print(f"Avg cost: {np.mean(costs)}")
+		print(f"Std cost: {np.std(costs, ddof=1)}")
+		print(f"Avg time to init sol: {np.mean(inits)}")
+		print(f"Std time to init sol: {np.std(inits, ddof=1)}")
+		print(f"# successes: {len(costs)}/{num_runs}")
+	print("")
 
 if __name__ == "__main__":
 	# parser = argparse.ArgumentParser(description='script for testing planners')
@@ -102,7 +138,7 @@ if __name__ == "__main__":
 	# args = parser.parse_args()
 
 	with open('obstacle_list.yaml') as obstacle_file:
-		scenario_name = 'mlo_3'
+		scenario_name = sys.argv[1]
 		obstacle_dict = yaml.load(obstacle_file)
 		obstacle_list = obstacle_dict[scenario_name]['obstacles']
 		local_goal = obstacle_dict[scenario_name]['goal']
@@ -146,4 +182,6 @@ if __name__ == "__main__":
 	# planning_env.visualize_plan()
 	# plt.show()
 
-	main(planning_env, planner, planning_env3, planner3, start, goal)
+	# main(planning_env, planner, planning_env3, planner3, start, goal)
+
+	run_experiments(planning_env, planner, planning_env3, planner3, start, goal, list(range(1,3)), 3, scenario_name)
