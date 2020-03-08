@@ -1,3 +1,4 @@
+# cython: language_level=3, boundscheck=False
 from distutils.core import setup
 from Cython.Build import cythonize
 
@@ -13,4 +14,7 @@ setup(
 )
 setup(
     ext_modules=cythonize("path_planning/rrt2.pyx"),
+)
+setup(
+    ext_modules=cythonize("path_planning/rrt23d.pyx"),
 )
