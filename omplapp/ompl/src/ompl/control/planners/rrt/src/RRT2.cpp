@@ -53,6 +53,9 @@ void ompl::control::RRT2::clear()
     if (nn_)
         nn_->clear();
     lastGoalMotion_ = nullptr;
+    isInit = false;
+    cmax_ = 0;
+    iter = 0;
 }
 
 void ompl::control::RRT2::freeMemory()

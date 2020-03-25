@@ -29,7 +29,7 @@ void dynamicCarSetup2(app::DynamicCarPlanning &setup)
     start[0] = 6.0;
     start[1] = 12.0;
     start[2] = 0.0;
-    start[3] = 0.01;
+    start[3] = 0.3;
     start[4] = 0.0;
 
     // define goal state
@@ -37,7 +37,7 @@ void dynamicCarSetup2(app::DynamicCarPlanning &setup)
     goal[0] = -39.0;
     goal[1] = 0.0; 
     goal[2] = 0.0;
-    goal[3] = 0.01;
+    goal[3] = 0.3;
     goal[4] = 0.0;
 
     // set the start & goal states
@@ -59,7 +59,7 @@ void dynamicCarSetup3(app::DynamicCarPlanning &setup)
     start[0] = 0.0;
     start[1] = 0.0;
     start[2] = 0.0;
-    start[3] = 0.01;
+    start[3] = 0.3;
     start[4] = 0.0;
 
     // define goal state
@@ -67,7 +67,7 @@ void dynamicCarSetup3(app::DynamicCarPlanning &setup)
     goal[0] = 5.0;
     goal[1] = 1.0; 
     goal[2] = 0.0;
-    goal[3] = 0.01;
+    goal[3] = 0.3;
     goal[4] = 0.0;
 
     // set the start & goal states

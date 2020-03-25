@@ -171,7 +171,7 @@ ompl::base::PlannerStatus ompl::control::RRT::solve(const base::PlannerTerminati
                     {
                         approxdif = dist;
                         solution = motion;
-                        break;
+                        //break;
                     }
                     if (dist < approxdif)
                     {
@@ -208,7 +208,7 @@ ompl::base::PlannerStatus ompl::control::RRT::solve(const base::PlannerTerminati
                 {
                     approxdif = dist;
                     solution = motion;
-                    break;
+                    // break;
                 }
                 if (dist < approxdif)
                 {

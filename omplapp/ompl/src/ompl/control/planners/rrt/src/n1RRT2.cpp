@@ -55,6 +55,9 @@ void ompl::control::n1RRT2::clear()
     if (nn_)
         nn_->clear();
     lastGoalMotion_ = nullptr;
+    isInit = false;
+    cmax_ = 0;
+    iter = 0;
 }
 
 void ompl::control::n1RRT2::freeMemory()
@@ -124,7 +127,7 @@ ompl::base::PlannerStatus ompl::control::n1RRT2::solve(const base::PlannerTermin
 
         base::StateSpacePtr space = si_->getStateSpace();
         base::ScopedState<> rs(space, rstate);
-        rs[3] = 0.1;
+        rs[3] = 0.3;
         /* sample a random control that attempts to go towards the random state, and also sample a control duration */
         unsigned int cd = controlSampler_->sampleTo(rctrl, nmotion->control, nmotion->state, rmotion->state);
         double *conVals = rctrl->as<RealVectorControlSpace::ControlType>()->values;

@@ -55,6 +55,9 @@ void ompl::control::n2RRT2::clear()
     if (nn_)
         nn_->clear();
     lastGoalMotion_ = nullptr;
+    isInit = false;
+    cmax_ = 0;
+    iter = 0;
 }
 
 void ompl::control::n2RRT2::freeMemory()
@@ -128,7 +131,7 @@ ompl::base::PlannerStatus ompl::control::n2RRT2::solve(const base::PlannerTermin
         {
             base::StateSpacePtr space = si_->getStateSpace();
             base::ScopedState<> rs(space, rstate);
-            rs[3] = 0.01;
+            rs[3] = 0.3;
         }
         unsigned int cd = controlSampler_->sampleTo(rctrl, nmotion->control, nmotion->state, rmotion->state);
         if (!isInit)
