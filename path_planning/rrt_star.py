@@ -261,7 +261,7 @@ def main(goal=[-15, 80.0]):
 
     # TODO refactor obstacle_list for lat lon.
     with open('obstacle_list.yaml') as obstacle_file:
-        scenario_name = 'mlo_3'
+        scenario_name = 'MLO3'
         obstacle_dict = yaml.load(obstacle_file)
         obstacle_list = obstacle_dict[scenario_name]['obstacles']
         # obstacle_list = 57.3 * np.array(obstacle_dict[scenario_name]['obstacles']) / 6366707.0
@@ -292,3 +292,4 @@ def main(goal=[-15, 80.0]):
 
 if __name__ == '__main__':
     main()
+
